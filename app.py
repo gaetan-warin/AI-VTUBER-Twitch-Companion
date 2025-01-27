@@ -1,13 +1,16 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, render_template, send_from_directory, make_response
 from flask_socketio import SocketIO
-import eventlet
 import os
 
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')  # Use environment variables
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 # Configure CORS properly for production
-socketio = SocketIO(app, cors_allowed_origins=os.environ.get('ALLOWED_ORIGINS', '*'))
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Unified model serving route using blueprint-like structure
 MODEL_BASE = 'model/shizuku'
@@ -36,13 +39,7 @@ def handle_speak(data):
 # Model serving routes
 @app.route('/model/shizuku/<path:filename>')
 def serve_shizuku(filename):
-    response = send_from_directory('model/shizuku', filename)
-    # Set MIME types for critical files
-    if filename.endswith('.moc'):
-        response.headers['Content-Type'] = 'application/octet-stream'
-    elif filename.endswith('.model.json'):
-        response.headers['Content-Type'] = 'application/json'
-    return response
+    return send_from_directory('model/shizuku', filename)  # Directory path
 
 @app.route('/model/shizuku/shizuku1024/<path:filename>')
 def serve_textures(filename):

@@ -5,16 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Interactive Live2D Avatar</title>
     <link rel="icon" href="static/favicon.ico" type="image/x-icon">
+
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/dylanNew/live2d/webgl/Live2D/lib/live2d.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.2/dist/browser/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/index.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/live2d-widget@3.1.4/lib/L2Dwidget.min.js"></script>
     <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
-
-    <div class="container">
-        <canvas id="live2d-canvas"></canvas>
-    </div>
+    <canvas id="canvas"></canvas>
 
     <div class="controls">
         <div class="input-group">
@@ -24,69 +26,71 @@
     </div>
 
     <script>
-        const socket = io();
+        // WebSocket configuration
+        const socket = io({
+            transports: ['websocket'],
+            reconnectionAttempts: 5,
+            timeout: 3000
+        });
+
+        // Speech synthesis setup
         const synth = window.speechSynthesis;
         let isSpeaking = false;
         let mouthTween = null;
-        let modelLoaded = false;
-        let loadTimeout;
+        let live2dModel = null;
         let voicesReady = false;
 
-        function initializeLive2D() {
-            console.log('Initializing Live2D...');
-            
-            // Attempt to initialize the Live2D widget
+        // Live2D model configuration
+        const cubism2Model = "model/shizuku/shizuku.model.json";
+
+        // Initialize application
+        (async function main() {
+            // Set up PIXI application
+            const app = new PIXI.Application({
+                view: document.getElementById("canvas"),
+                autoStart: true,
+                resizeTo: window,
+                backgroundAlpha: 0
+            });
+
             try {
-                L2Dwidget.init({
-                    model: {
-                        jsonPath: '/model/shizuku/shizuku.model.json',
-                        scale: 1.2,
-                    },
-                    display: {
-                        superSample: 2,
-                        width: 400,
-                        height: 800,
-                        position: 'center',
-                        hOffset: 0,
-                        vOffset: 250,
-                    },
-                    mobile: {
-                        show: true,
-                        scale: 0.8,
-                    },
-                    react: {
-                        opacityDefault: 1,
-                        opacityOnHover: 0.8,
-                    },
-                    canvas: document.getElementById('live2d-canvas'),
-                });
-
-                console.log('Live2D model initialization triggered.');
-
-                // After initialization, check if the model has loaded and is visible
-                if (L2Dwidget.config && L2Dwidget.config.model && L2Dwidget.config.model.jsonPath) {
-                    modelLoaded = true;
-                    console.log('Live2D model loaded successfully!');
-                    document.getElementById('live2d-canvas').style.opacity = 1;
-                } else {
-                    throw new Error('Live2D model data missing.');
-                }
+                // Load Live2D model
+                live2dModel = await PIXI.live2d.Live2DModel.from(cubism2Model);
+                app.stage.addChild(live2dModel);
+                live2dModel.scale.set(0.3);
+                
+                // Initialize mouth parameter
+                window.mouthParam = live2dModel.internalModel.parameters.find(
+                    p => p.id === 'ParamMouthOpenY'
+                );
+                
+                // Set up resize handler
+                window.addEventListener('resize', updateModelPosition);
+                updateModelPosition();
 
             } catch (error) {
-                console.error('Live2D initialization failed:', error);
-                handleLoadError('Live2D failed to initialize.');
+                console.error('Model loading error:', error);
             }
+        })();
+
+        // Position handling
+        function updateModelPosition() {
+            if (!live2dModel) return;
+            
+            const isMobile = window.innerWidth <= 768;
+            live2dModel.scale.set(isMobile ? 0.8 : 1.2);
+            live2dModel.position.set(
+                window.innerWidth / 2,
+                window.innerHeight / 2 + 100
+            );
         }
 
-
-        function handleLoadError(message) {
-            console.error('Error:', message);
-            alert(message);
-        }
-
-        // Speech Synthesis
+        // Speech functions
         function speak(text) {
-            if (!text) return;
+            if (!text || !voicesReady) {
+                console.log('Speech not ready');
+                return;
+            }
 
             if (isSpeaking) {
                 synth.cancel();
@@ -94,65 +98,73 @@
                 mouthTween?.kill();
             }
 
-            try {
-                const utterance = new SpeechSynthesisUtterance(text);
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voice = synth.getVoices().find(v => v.name.includes('Female')) || synth.getVoices()[0];
 
-                const voices = synth.getVoices();
-                let voice = voices.find((v) => v.name.includes('Female')) || voices[0];
+            Object.assign(utterance, {
+                voice: voice,
+                pitch: 1.1,
+                rate: 0.95
+            });
 
-                utterance.voice = voice;
-                utterance.pitch = 1.1;
-                utterance.rate = 0.95;
+            utterance.onstart = () => {
+                isSpeaking = true;
+                mouthTween = gsap.to({}, {
+                    duration: 0.1,
+                    repeat: -1,
+                    onRepeat: () => animateMouth(Math.random() * 0.5 + 0.5)
+                });
+            };
 
-                utterance.onstart = () => {
-                    isSpeaking = true;
-                    mouthTween = gsap.to({}, {
-                        duration: 0.1,
-                        repeat: -1,
-                        onRepeat: () => animateMouth(Math.random() * 0.5 + 0.5),
-                    });
-                };
+            utterance.onend = () => {
+                isSpeaking = false;
+                mouthTween?.kill();
+                animateMouth(0);
+            };
 
-                utterance.onend = () => {
-                    isSpeaking = false;
-                    mouthTween?.kill();
-                    animateMouth(0);
-                };
-
-                synth.speak(utterance);
-            } catch (error) {
-                console.error('Speech synthesis error:', error);
-            }
+            synth.speak(utterance);
         }
 
+        // Mouth animation
         function animateMouth(value) {
-            if (modelLoaded) {
-                L2Dwidget.instance.setParam('ParamMouthOpenY', value);
-            } else {
-                console.warn('Live2D instance not found for mouth animation.');
+            if (live2dModel && window.mouthParam) {
+                live2dModel.internalModel.setParameterValue(window.mouthParam, value);
             }
         }
 
-        // Event Listeners
-        document.getElementById('speakBtn').addEventListener('click', () => {
-            const text = document.getElementById('text-input').value.trim();
-            if (text) {
-                socket.emit('speak', { text });
-                document.getElementById('text-input').value = '';
-            }
-        });
+        // Event listeners
+        function setupEventListeners() {
+            // Speech button handler
+            document.getElementById('speakBtn').addEventListener('click', () => {
+                const text = document.getElementById('text-input').value.trim();
+                if (text) socket.emit('speak', { text });
+            });
 
-        socket.on('speak_text', (data) => {
-            speak(data.text);
-        });
+            // Socket.io events
+            socket.on('speak_text', data => {
+                console.log('Received speech text:', data.text);
+                requestAnimationFrame(() => speak(data.text));
+            });
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeLive2D();
-            socket.connect();
-        });
+            socket.on('connect', () => {
+                console.log('WebSocket connected:', socket.id);
+            });
 
-        synth.addEventListener('voiceschanged', () => {
+            socket.on('disconnect', () => {
+                console.log('WebSocket disconnected');
+            });
+        }
+
+        // Voice initialization
+        synth.onvoiceschanged = () => {
             voicesReady = true;
+            console.log('Voices loaded:', synth.getVoices());
+        };
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            socket.connect();
         });
     </script>
 </body>
