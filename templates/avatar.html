@@ -152,32 +152,33 @@
                 console.log('Setting up Live2D with modified configuration...');
                 
                 live2dInstance = L2Dwidget.init({
-                    jsonPath: '/model/shizuku/shizuku.model.json',
-                    modelPath: '/model/shizuku/', // Explicitly set model path
-                    scale: 1.1,
-                    display: {
-                        width: 300,
-                        height: 600,
-                        position: 'center',
-                        vOffset: -50,
-                        hOffset: 0
+                    "model":{
+                        "scale":1,
+                        "jsonPath":"/model/shizuku/shizuku.model.json"
                     },
-                    mobile: {
-                        show: true,
-                        scale: 0.8,
-                        motion: true
+                    "display":{
+                        "superSample":2,
+                        "width":150,
+                        "height":300,
+                        "position":"right",
+                        "hOffset":0,
+                        "vOffset":-20
                     },
-                    react: {
-                        opacityDefault: 1,
-                        opacityOnHover: 0.8
+                    "mobile":{
+                        "show":true,
+                        "scale":0.5
                     },
-                    dev: {
-                        border: false
+                    "name": {
+                        "canvas": "live2d-canvas",
+                        "div": "live2d-canvas"
                     },
-                    debug: true, // Enable debug mode
-                    log: true,   // Enable logging
-                    onLoad: resolve,
-                    onError: reject
+                    "react":{
+                        "opacity":0.7
+                    },
+                    "dialog": {
+                        "enable": true,
+                        "hitokoto": false
+                    }                   
                 });
             });
 
