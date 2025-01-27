@@ -30,7 +30,7 @@ def handle_speak(data):
     """Handle speech request and broadcast to all clients"""
     text = data.get('text', '').strip()
     if text:
-        # Add your TTS processing here if needed
+        # Broadcast to all connected clients
         socketio.emit('speak_text', {'text': text})
 
 # Model serving routes
@@ -69,9 +69,9 @@ def handle_connect():
 def handle_disconnect():
     print("Client disconnected")
 
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=os.environ.get('DEBUG', False))

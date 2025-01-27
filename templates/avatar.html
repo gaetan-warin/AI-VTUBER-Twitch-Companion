@@ -4,113 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Interactive Live2D Avatar</title>
-    <link rel="icon" href="" type="image/x-icon">
+    <link rel="icon" href="static/favicon.ico" type="image/x-icon">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/live2d-widget@3.1.4/lib/L2Dwidget.min.js"></script>
-    <style>
-        :root {
-            --primary-color: #4CAF50;
-            --background-color: #f0f8ff;
-            --container-width: min(90vw, 600px);
-        }
-
-        body {
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: var(--background-color);
-            font-family: Arial, sans-serif;
-        }
-
-        .container {
-            position: relative;
-            width: var(--container-width);
-            height: 70vh;
-            margin-top: 20px;
-        }
-
-        #live2d-canvas {
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-        }
-
-        .controls {
-            margin: 20px;
-            width: var(--container-width);
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            flex-direction: column;
-        }
-
-        textarea {
-            width: 100%;
-            height: 100px;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            resize: vertical;
-            font-size: 16px;
-        }
-
-        button {
-            padding: 12px 24px;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: transform 0.1s ease;
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                height: 60vh;
-            }
-            
-            button {
-                width: 100%;
-            }
-        }
-
-        .error-message {
-            text-align: center;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .error-message p {
-            color: #dc3545;
-            margin-bottom: 15px;
-        }
-
-        .error-message button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .error-message button:hover {
-            background: #45a049;
-        }
-    </style>
+    <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
 
@@ -130,104 +28,66 @@
         const synth = window.speechSynthesis;
         let isSpeaking = false;
         let mouthTween = null;
-        let currentModel = null;
-
-        let live2dInstance;
         let modelLoaded = false;
         let loadTimeout;
+        let voicesReady = false;
 
         function initializeLive2D() {
-            console.log('Starting Live2D initialization...');
-    
-            // Clear any existing instances
-            if (window.L2Dwidget) {
-                console.log('Cleaning up existing L2Dwidget instance...');
-                if (live2dInstance && live2dInstance.destroy) {
-                    live2dInstance.destroy();
-                }
-            }
-
-            // Create a promise to track loading status
-            const modelLoadingPromise = new Promise((resolve, reject) => {
-                console.log('Setting up Live2D with modified configuration...');
-                
-                live2dInstance = L2Dwidget.init({
-                    "model":{
-                        "scale":1,
-                        "jsonPath":"/model/shizuku/shizuku.model.json"
+            console.log('Initializing Live2D...');
+            
+            // Attempt to initialize the Live2D widget
+            try {
+                L2Dwidget.init({
+                    model: {
+                        jsonPath: '/model/shizuku/shizuku.model.json',
+                        scale: 1.2,
                     },
-                    "display":{
-                        "superSample":2,
-                        "width":150,
-                        "height":300,
-                        "position":"right",
-                        "hOffset":0,
-                        "vOffset":-20
+                    display: {
+                        superSample: 2,
+                        width: 400,
+                        height: 800,
+                        position: 'center',
+                        hOffset: 0,
+                        vOffset: 250,
                     },
-                    "mobile":{
-                        "show":true,
-                        "scale":0.5
+                    mobile: {
+                        show: true,
+                        scale: 0.8,
                     },
-                    "name": {
-                        "canvas": "live2d-canvas",
-                        "div": "live2d-canvas"
+                    react: {
+                        opacityDefault: 1,
+                        opacityOnHover: 0.8,
                     },
-                    "react":{
-                        "opacity":0.7
-                    },
-                    "dialog": {
-                        "enable": true,
-                        "hitokoto": false
-                    }                   
+                    canvas: document.getElementById('live2d-canvas'),
                 });
-            });
 
-            // Set up event listeners
-            window.addEventListener('error', function(e) {
-                console.error('Global error:', e.error);
-            });
+                console.log('Live2D model initialization triggered.');
 
-            // Track loading state
-            modelLoadingPromise
-                .then(() => {
-                    console.log('Live2D model loaded successfully');
-                    clearTimeout(loadTimeout);
+                // After initialization, check if the model has loaded and is visible
+                if (L2Dwidget.config && L2Dwidget.config.model && L2Dwidget.config.model.jsonPath) {
                     modelLoaded = true;
+                    console.log('Live2D model loaded successfully!');
                     document.getElementById('live2d-canvas').style.opacity = 1;
-                })
-                .catch(error => {
-                    console.error('Live2D loading error:', error);
-                    handleLoadError(`Loading error: ${error.message || 'Unknown error'}`);
-                });
-
-            // Initialize loading timeout
-            loadTimeout = setTimeout(() => {
-                if (!modelLoaded) {
-                    handleLoadError('Loading timeout - model took too long to load');
-                    cleanupLive2D();
+                } else {
+                    throw new Error('Live2D model data missing.');
                 }
-            }, 30000); // 30 seconds
-        }
 
-        // Enhanced cleanup function
-        function cleanupLive2D() {
-            console.log('Cleaning up Live2D...');
-            if (live2dInstance && live2dInstance.destroy) {
-                live2dInstance.destroy();
+            } catch (error) {
+                console.error('Live2D initialization failed:', error);
+                handleLoadError('Live2D failed to initialize.');
             }
-            window.L2Dwidget = null;
         }
 
-        // Enhanced error handler
+
         function handleLoadError(message) {
-            console.error('Live2D Error:', message);
-            cleanupLive2D();
+            console.error('Error:', message);
+            alert(message);
         }
 
         // Speech Synthesis
         function speak(text) {
             if (!text) return;
-            
+
             if (isSpeaking) {
                 synth.cancel();
                 isSpeaking = false;
@@ -236,13 +96,20 @@
 
             try {
                 const utterance = new SpeechSynthesisUtterance(text);
-                
+
+                const voices = synth.getVoices();
+                let voice = voices.find((v) => v.name.includes('Female')) || voices[0];
+
+                utterance.voice = voice;
+                utterance.pitch = 1.1;
+                utterance.rate = 0.95;
+
                 utterance.onstart = () => {
                     isSpeaking = true;
                     mouthTween = gsap.to({}, {
                         duration: 0.1,
                         repeat: -1,
-                        onRepeat: () => animateMouth(Math.random() * 0.5 + 0.5)
+                        onRepeat: () => animateMouth(Math.random() * 0.5 + 0.5),
                     });
                 };
 
@@ -252,12 +119,6 @@
                     animateMouth(0);
                 };
 
-                const voices = synth.getVoices();
-                const femaleVoice = voices.find(v => v.name.includes('Female')) || voices[0];
-                utterance.voice = femaleVoice;
-                utterance.pitch = 1;
-                utterance.rate = 1;
-
                 synth.speak(utterance);
             } catch (error) {
                 console.error('Speech synthesis error:', error);
@@ -265,12 +126,10 @@
         }
 
         function animateMouth(value) {
-            // Example implementation - adjust based on your Live2D model parameters
-            if (window.Live2DModel) {
-                const model = window.Live2DModel.instances[0];
-                if (model) {
-                    model.setParam('ParamMouthOpenY', value);
-                }
+            if (modelLoaded) {
+                L2Dwidget.instance.setParam('ParamMouthOpenY', value);
+            } else {
+                console.warn('Live2D instance not found for mouth animation.');
             }
         }
 
@@ -287,11 +146,14 @@
             speak(data.text);
         });
 
-        // Initialize when ready
         document.addEventListener('DOMContentLoaded', () => {
             initializeLive2D();
             socket.connect();
-        });    
-</script>
+        });
+
+        synth.addEventListener('voiceschanged', () => {
+            voicesReady = true;
+        });
+    </script>
 </body>
 </html>
