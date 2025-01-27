@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avatar with Flask + Speech</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f0f8ff;
+        }
+        .container {
+            position: relative;
+            width: 500px;
+            height: 700px;
+        }
+        #avatar {
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            margin: 20px;
+        }
+        textarea {
+            width: 400px;
+            height: 100px;
+            padding: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <svg id="avatar" viewBox="0 0 500 700">
+            <path d="M250 600 L200 400 L300 400 Z" fill="#87CEEB"/>
+            <circle cx="250" cy="250" r="150" fill="#FFE4C4"/>
+            <g id="eyes">
+                <circle class="eye" cx="200" cy="200" r="30" fill="white"/>
+                <circle class="pupil" cx="200" cy="200" r="15" fill="black"/>
+                <circle class="eye" cx="300" cy="200" r="30" fill="white"/>
+                <circle class="pupil" cx="300" cy="200" r="15" fill="black"/>
+            </g>
+            <path id="mouth" d="M200 320 Q250 350 300 320" fill="none" stroke="#FF69B4" stroke-width="8"/>
+        </svg>
+    </div>
+
+    <div class="controls">
+        <textarea id="text" placeholder="Enter text..."></textarea>
+        <button id="speak-btn">Speak</button>
+    </div>
+
+    <script>
+        const socket = io();
+        const synth = window.speechSynthesis;
+        let isSpeaking = false;
+        const mouth = document.getElementById('mouth');
+        const pupils = document.querySelectorAll('.pupil');
+
+        function animateMouth() {
+            const path = isSpeaking ? 'M200 300 Q250 400 300 300' : 'M200 320 Q250 350 300 320';
+            gsap.to(mouth, {
+                duration: 0.1,
+                attr: { d: path },
+                repeat: isSpeaking ? -1 : 0,
+                yoyo: true
+            });
+        }
+
+        function moveEyes() {
+            pupils.forEach(pupil => {
+                gsap.to(pupil, {
+                    duration: 1,
+                    x: (Math.random() - 0.5) * 10,
+                    y: (Math.random() - 0.5) * 10,
+                    onComplete: moveEyes
+                });
+            });
+        }
+        moveEyes();
+
+        function speak(text) {
+            if (isSpeaking) return;
+            isSpeaking = true;
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.onstart = () => animateMouth();
+            utterance.onend = () => {
+                isSpeaking = false;
+                gsap.to(mouth, { attr: { d: 'M200 320 Q250 350 300 320' } });
+            };
+            
+            synth.speak(utterance);
+        }
+
+        // POST request to send text to Flask backend
+        document.getElementById('speak-btn').addEventListener('click', () => {
+            const text = document.getElementById('text').value.trim();
+            if (text) {
+                // Make POST request to the Flask backend
+                fetch('/speak', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Text sent to avatar') {
+                        socket.emit('speak', { text });  // Emit text to Socket.IO server
+                    } else {
+                        console.error('Error:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        });
+
+        socket.on('speak_text', data => speak(data.text));
+    </script>
+</body>
+</html>
