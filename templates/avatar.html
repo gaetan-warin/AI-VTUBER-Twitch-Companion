@@ -2,133 +2,295 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avatar with Flask + Speech</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Interactive Live2D Avatar</title>
+    <link rel="icon" href="" type="image/x-icon">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/live2d-widget@3.1.4/lib/L2Dwidget.min.js"></script>
     <style>
+        :root {
+            --primary-color: #4CAF50;
+            --background-color: #f0f8ff;
+            --container-width: min(90vw, 600px);
+        }
+
         body {
+            margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: #f0f8ff;
+            background: var(--background-color);
+            font-family: Arial, sans-serif;
         }
+
         .container {
             position: relative;
-            width: 500px;
-            height: 700px;
+            width: var(--container-width);
+            height: 70vh;
+            margin-top: 20px;
         }
-        #avatar {
+
+        #live2d-canvas {
             width: 100%;
             height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
         }
+
         .controls {
             margin: 20px;
+            width: var(--container-width);
         }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+        }
+
         textarea {
-            width: 400px;
+            width: 100%;
             height: 100px;
-            padding: 10px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-size: 16px;
         }
+
         button {
-            padding: 10px 20px;
+            padding: 12px 24px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.1s ease;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                height: 60vh;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+
+        .error-message {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .error-message p {
+            color: #dc3545;
+            margin-bottom: 15px;
+        }
+
+        .error-message button {
             background: #4CAF50;
             color: white;
             border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
             cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .error-message button:hover {
+            background: #45a049;
         }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <svg id="avatar" viewBox="0 0 500 700">
-            <path d="M250 600 L200 400 L300 400 Z" fill="#87CEEB"/>
-            <circle cx="250" cy="250" r="150" fill="#FFE4C4"/>
-            <g id="eyes">
-                <circle class="eye" cx="200" cy="200" r="30" fill="white"/>
-                <circle class="pupil" cx="200" cy="200" r="15" fill="black"/>
-                <circle class="eye" cx="300" cy="200" r="30" fill="white"/>
-                <circle class="pupil" cx="300" cy="200" r="15" fill="black"/>
-            </g>
-            <path id="mouth" d="M200 320 Q250 350 300 320" fill="none" stroke="#FF69B4" stroke-width="8"/>
-        </svg>
+        <canvas id="live2d-canvas"></canvas>
     </div>
 
     <div class="controls">
-        <textarea id="text" placeholder="Enter text..."></textarea>
-        <button id="speak-btn">Speak</button>
+        <div class="input-group">
+            <textarea id="text-input" placeholder="Enter text for the avatar to speak..."></textarea>
+            <button id="speakBtn">Speak</button>
+        </div>
     </div>
 
     <script>
         const socket = io();
         const synth = window.speechSynthesis;
         let isSpeaking = false;
-        const mouth = document.getElementById('mouth');
-        const pupils = document.querySelectorAll('.pupil');
+        let mouthTween = null;
+        let currentModel = null;
 
-        function animateMouth() {
-            const path = isSpeaking ? 'M200 300 Q250 400 300 300' : 'M200 320 Q250 350 300 320';
-            gsap.to(mouth, {
-                duration: 0.1,
-                attr: { d: path },
-                repeat: isSpeaking ? -1 : 0,
-                yoyo: true
-            });
-        }
+        let live2dInstance;
+        let modelLoaded = false;
+        let loadTimeout;
 
-        function moveEyes() {
-            pupils.forEach(pupil => {
-                gsap.to(pupil, {
-                    duration: 1,
-                    x: (Math.random() - 0.5) * 10,
-                    y: (Math.random() - 0.5) * 10,
-                    onComplete: moveEyes
+        function initializeLive2D() {
+            console.log('Starting Live2D initialization...');
+    
+            // Clear any existing instances
+            if (window.L2Dwidget) {
+                console.log('Cleaning up existing L2Dwidget instance...');
+                if (live2dInstance && live2dInstance.destroy) {
+                    live2dInstance.destroy();
+                }
+            }
+
+            // Create a promise to track loading status
+            const modelLoadingPromise = new Promise((resolve, reject) => {
+                console.log('Setting up Live2D with modified configuration...');
+                
+                live2dInstance = L2Dwidget.init({
+                    jsonPath: '/model/shizuku/shizuku.model.json',
+                    modelPath: '/model/shizuku/', // Explicitly set model path
+                    scale: 1.1,
+                    display: {
+                        width: 300,
+                        height: 600,
+                        position: 'center',
+                        vOffset: -50,
+                        hOffset: 0
+                    },
+                    mobile: {
+                        show: true,
+                        scale: 0.8,
+                        motion: true
+                    },
+                    react: {
+                        opacityDefault: 1,
+                        opacityOnHover: 0.8
+                    },
+                    dev: {
+                        border: false
+                    },
+                    debug: true, // Enable debug mode
+                    log: true,   // Enable logging
+                    onLoad: resolve,
+                    onError: reject
                 });
             });
-        }
-        moveEyes();
 
-        function speak(text) {
-            if (isSpeaking) return;
-            isSpeaking = true;
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.onstart = () => animateMouth();
-            utterance.onend = () => {
-                isSpeaking = false;
-                gsap.to(mouth, { attr: { d: 'M200 320 Q250 350 300 320' } });
-            };
-            
-            synth.speak(utterance);
-        }
+            // Set up event listeners
+            window.addEventListener('error', function(e) {
+                console.error('Global error:', e.error);
+            });
 
-        // POST request to send text to Flask backend
-        document.getElementById('speak-btn').addEventListener('click', () => {
-            const text = document.getElementById('text').value.trim();
-            if (text) {
-                // Make POST request to the Flask backend
-                fetch('/speak', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ text: text })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message === 'Text sent to avatar') {
-                        socket.emit('speak', { text });  // Emit text to Socket.IO server
-                    } else {
-                        console.error('Error:', data.error);
-                    }
+            // Track loading state
+            modelLoadingPromise
+                .then(() => {
+                    console.log('Live2D model loaded successfully');
+                    clearTimeout(loadTimeout);
+                    modelLoaded = true;
+                    document.getElementById('live2d-canvas').style.opacity = 1;
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Live2D loading error:', error);
+                    handleLoadError(`Loading error: ${error.message || 'Unknown error'}`);
                 });
+
+            // Initialize loading timeout
+            loadTimeout = setTimeout(() => {
+                if (!modelLoaded) {
+                    handleLoadError('Loading timeout - model took too long to load');
+                    cleanupLive2D();
+                }
+            }, 30000); // 30 seconds
+        }
+
+        // Enhanced cleanup function
+        function cleanupLive2D() {
+            console.log('Cleaning up Live2D...');
+            if (live2dInstance && live2dInstance.destroy) {
+                live2dInstance.destroy();
+            }
+            window.L2Dwidget = null;
+        }
+
+        // Enhanced error handler
+        function handleLoadError(message) {
+            console.error('Live2D Error:', message);
+            cleanupLive2D();
+        }
+
+        // Speech Synthesis
+        function speak(text) {
+            if (!text) return;
+            
+            if (isSpeaking) {
+                synth.cancel();
+                isSpeaking = false;
+                mouthTween?.kill();
+            }
+
+            try {
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                utterance.onstart = () => {
+                    isSpeaking = true;
+                    mouthTween = gsap.to({}, {
+                        duration: 0.1,
+                        repeat: -1,
+                        onRepeat: () => animateMouth(Math.random() * 0.5 + 0.5)
+                    });
+                };
+
+                utterance.onend = () => {
+                    isSpeaking = false;
+                    mouthTween?.kill();
+                    animateMouth(0);
+                };
+
+                const voices = synth.getVoices();
+                const femaleVoice = voices.find(v => v.name.includes('Female')) || voices[0];
+                utterance.voice = femaleVoice;
+                utterance.pitch = 1;
+                utterance.rate = 1;
+
+                synth.speak(utterance);
+            } catch (error) {
+                console.error('Speech synthesis error:', error);
+            }
+        }
+
+        function animateMouth(value) {
+            // Example implementation - adjust based on your Live2D model parameters
+            if (window.Live2DModel) {
+                const model = window.Live2DModel.instances[0];
+                if (model) {
+                    model.setParam('ParamMouthOpenY', value);
+                }
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('speakBtn').addEventListener('click', () => {
+            const text = document.getElementById('text-input').value.trim();
+            if (text) {
+                socket.emit('speak', { text });
+                document.getElementById('text-input').value = '';
             }
         });
 
-        socket.on('speak_text', data => speak(data.text));
-    </script>
+        socket.on('speak_text', (data) => {
+            speak(data.text);
+        });
+
+        // Initialize when ready
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeLive2D();
+            socket.connect();
+        });    
+</script>
 </body>
 </html>
