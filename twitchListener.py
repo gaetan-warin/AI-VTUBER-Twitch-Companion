@@ -4,13 +4,16 @@ import re
 from twitchio.ext import commands
 import asyncio
 import time
+from dotenv import load_dotenv
+import os
 
-TOKEN = "6bcf4tmzphmf0zm8zbi84jl6likdru"
-CLIENT_ID = 'gp762nuuoqcoxypju8c569th9wz7q5'
-CHANNEL_NAME = ['ai_chat_bot']
-LIMIT_ANSWER = 150
-PRE_PROMPT = f"Respond in less than {LIMIT_ANSWER} characters and be as consistent as possible."
-API_URL = "http://localhost:5000/"  # The endpoint for the REST API
+load_dotenv()
+
+TOKEN = os.getenv("TOKEN")
+CLIENT_ID = os.getenv("CLIENT_ID")
+CHANNEL_NAME = os.getenv("CHANNEL_NAME")
+PRE_PROMPT = os.getenv("PRE_PROMPT")
+API_URL = os.getenv("API_URL")
 
 class TwitchBot(commands.Bot):
     def __init__(self):
@@ -47,7 +50,6 @@ class TwitchBot(commands.Bot):
                 return
 
         self.user_last_message[user_id] = (message.content, current_time)
-        print(f"**Message from {message.author.name}: {message.content}")
 
         if message.content.startswith('!ai'):
             user_input = message.content[4:].strip()
@@ -59,7 +61,7 @@ class TwitchBot(commands.Bot):
             self.processing_time = current_time
 
             response = self.generate_ai_response(user_input)
-            print(f"*** BOTWarga answer: {response}")
+            # print(f"*** BOTWarga answer: {response}")
             await self.send_to_tts(response)
 
             await self._wait_for_extra_delay()
@@ -75,7 +77,10 @@ class TwitchBot(commands.Bot):
             
             # Check the response from the TTS server
             if response.status_code == 200:
+                print("")
                 print(f"Successfully sent to server: {text}")
+                print("")
+
             else:
                 print(f"Error sending to server. Status code: {response.status_code}")
         except Exception as e:
@@ -103,7 +108,7 @@ class TwitchBot(commands.Bot):
     def generate_ai_response(self, user_input):
         try:
             user_input = f"{PRE_PROMPT} Your prompt is: {user_input}."
-            print(f"User input: {user_input}")
+            print(f"** User input: {user_input}")
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={"model": "deepseek-r1:1.5b", "prompt": user_input},

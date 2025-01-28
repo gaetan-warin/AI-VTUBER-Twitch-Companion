@@ -77,9 +77,18 @@
             }
         }
 
+        // Voice initialization
+        synth.onvoiceschanged = () => {
+            voicesReady = true;
+            console.log('Voices loaded:', synth.getVoices());
+        };
+
         // Speech functions
         function speak(text) {
-            if (!text || !voicesReady) return;
+            if (!text || !voicesReady) {
+                console.log("Voices not loaded yet.");
+                return;
+            }
 
             if (isSpeaking) {
                 synth.cancel();
@@ -87,48 +96,76 @@
                 gsap.killTweensOf(mouthState);
             }
 
-            const utterance = new SpeechSynthesisUtterance(text);
-            const voice = synth.getVoices().find(v => v.name.includes('Female')) || synth.getVoices()[0];
+            // Split text into chunks based on sentence endings (., !, ?)
+            const sentenceEndRegex = /([.!?])\s*/g;
+            const sentences = [];
+            let lastIndex = 0;
 
-            Object.assign(utterance, {
-                voice: voice,
-                pitch: 1.1,
-                rate: 0.95
-            });
+            // Capture sentences
+            while ((match = sentenceEndRegex.exec(text)) !== null) {
+                const sentence = text.slice(lastIndex, match.index + match[0].length).trim();
+                if (sentence) {
+                    sentences.push(sentence);
+                }
+                lastIndex = match.index + match[0].length;
+            }
 
-            utterance.onstart = () => {
-                isSpeaking = true;
-                // Animate mouth using GSAP with sine wave pattern
-                gsap.to(mouthState, {
-                    duration: 0.2,
-                    value: 1,
-                    repeat: -1,
-                    yoyo: true,
-                    ease: "sine.inOut",
-                    modifiers: {
-                        value: () => Math.abs(Math.sin(performance.now() / 200)) * 0.8
-                    }
-                });
-            };
+            // Add remaining text if any
+            if (lastIndex < text.length) {
+                sentences.push(text.slice(lastIndex).trim());
+            }
 
-            utterance.onend = () => {
-                isSpeaking = false;
-                gsap.killTweensOf(mouthState);
-                gsap.to(mouthState, {
-                    duration: 0.3,
-                    value: 0,
-                    ease: "power2.out"
-                });
-            };
+            let sentenceIndex = 0;
 
-            synth.speak(utterance);
+            // Function to speak each sentence
+            function speakNextSentence() {
+                if (sentenceIndex < sentences.length) {
+                    const utterance = new SpeechSynthesisUtterance(sentences[sentenceIndex]);
+                    const voice = synth.getVoices().find(v => v.name.includes('Female')) || synth.getVoices()[0];
+
+                    Object.assign(utterance, {
+                        voice: voice,
+                        pitch: 1.1,
+                        rate: 0.95
+                    });
+
+                    utterance.onstart = () => {
+                        isSpeaking = true;
+                        // Animate mouth using GSAP with sine wave pattern
+                        gsap.to(mouthState, {
+                            duration: 0.2,
+                            value: 1,
+                            repeat: -1,
+                            yoyo: true,
+                            ease: "sine.inOut",
+                            modifiers: {
+                                value: () => Math.abs(Math.sin(performance.now() / 200)) * 0.8
+                            }
+                        });
+                    };
+
+                    utterance.onend = () => {
+                        sentenceIndex++;
+                        if (sentenceIndex < sentences.length) {
+                            speakNextSentence(); // Speak the next sentence
+                        } else {
+                            isSpeaking = false;
+                            gsap.killTweensOf(mouthState);
+                            gsap.to(mouthState, {
+                                duration: 0.3,
+                                value: 0,
+                                ease: "power2.out"
+                            });
+                        }
+                    };
+
+                    synth.speak(utterance);
+                }
+            }
+
+            speakNextSentence(); // Start speaking the first sentence
         }
 
-        // Voice initialization
-        synth.onvoiceschanged = () => {
-            voicesReady = true;
-            console.log('Voices loaded:', synth.getVoices());
-        };
 
         function setupEventListeners() {
             document.getElementById('speakBtn').addEventListener('click', () => {
@@ -136,8 +173,11 @@
                 if (text) socket.emit('speak', { text });
             });
 
-            socket.on('speak_text', data => speak(data.text));
-
+            socket.on('speak_text', data => {
+                console.log("Received text to speak:", data.text);
+                speak(data.text);
+            });
+            
             socket.on('connect', () => console.log('WebSocket connected:', socket.id));
             socket.on('disconnect', () => console.log('WebSocket disconnected'));
         }
