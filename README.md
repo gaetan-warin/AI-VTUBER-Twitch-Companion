@@ -1,4 +1,4 @@
-# AI Chat Bot with Live2D Avatar
+# AI Chat Twitch Bot with Live2D Avatar
 
 This project implements a simple AI chatbot that uses a Live2D avatar to animate and speak in response to user input. The system leverages WebSockets to facilitate communication between the frontend (browser) and backend (Flask server) and integrates speech synthesis for the avatar's dialogue.
 
