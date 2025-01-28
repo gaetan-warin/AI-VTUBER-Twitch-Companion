@@ -59,10 +59,36 @@
                 app.stage.addChild(live2dModel);
                 live2dModel.scale.set(0.3);
                 
-                // Initialize mouth parameter
-                window.mouthParam = live2dModel.internalModel.parameters.find(
-                    p => p.id === 'ParamMouthOpenY'
-                );
+                // Wait for model to be fully loaded
+                await new Promise(resolve => live2dModel.once('ready', resolve));
+
+                const coreModel = live2dModel.internalModel.coreModel;
+
+                window.mouthParamIndex = coreModel.getParameterIndex("PARAM_MOUTH_OPEN_Y");
+
+                if (window.mouthParamIndex === -1) {
+                    const parameterCount = coreModel.getParameterCount();
+                    const parameterIds = Array.from({length: parameterCount}, (_, i) => coreModel.getParameterId(i));
+                    console.log('All Parameters:', parameterIds);
+                    
+                    // Find mouth parameter index
+                    window.mouthParamIndex = parameterIds.findIndex(id => 
+                        id.toLowerCase().includes('mouth')
+                    );
+
+                    if (window.mouthParamIndex === -1) {
+                        console.error('Mouth parameter not found in:', parameterIds);
+                    }
+                }
+
+
+            console.log('Mouth parameter index:', window.mouthParamIndex);
+            console.log('All parameters:', Array.from({length: coreModel.getParameterCount()}, 
+                (_, i) => coreModel.getParameterId(i)));
+
+            // Initial positioning
+            updateModelPosition();
+            window.addEventListener('resize', updateModelPosition);
                 
                 // Set up resize handler
                 window.addEventListener('resize', updateModelPosition);
@@ -109,17 +135,30 @@
 
             utterance.onstart = () => {
                 isSpeaking = true;
+                let startTime = Date.now();
+                const animationSpeed = 0.008 * (1.1 - utterance.rate); // Adjust based on speech rate
+                
                 mouthTween = gsap.to({}, {
-                    duration: 0.1,
-                    repeat: -1,
-                    onRepeat: () => animateMouth(Math.random() * 0.5 + 0.5)
+                    duration: Infinity, // Continuous animation
+                    onUpdate: () => {
+                        if (!isSpeaking) return;
+                        const time = (Date.now() - startTime) * animationSpeed;
+                        // Smooth sine wave between 0.3 and 0.7
+                        const value = Math.abs(Math.sin(time)) * 0.6 + 0.2;
+                        animateMouth(value);
+                    }
                 });
             };
 
             utterance.onend = () => {
                 isSpeaking = false;
                 mouthTween?.kill();
-                animateMouth(0);
+                // Smooth close animation
+                gsap.to({}, {
+                    duration: 0.2,
+                    onUpdate: () => animateMouth(0),
+                    ease: "power2.out"
+                });
             };
 
             synth.speak(utterance);
@@ -127,8 +166,14 @@
 
         // Mouth animation
         function animateMouth(value) {
-            if (live2dModel && window.mouthParam) {
-                live2dModel.internalModel.setParameterValue(window.mouthParam, value);
+            if (live2dModel && window.mouthParamIndex !== undefined && window.mouthParamIndex !== -1) {
+                const coreModel = live2dModel.internalModel.coreModel;
+                coreModel.setParamFloat(window.mouthParamIndex, value);
+                
+                // Update model and request render
+                live2dModel.internalModel.update();
+                live2dModel.internalModel.coreModel.update();
+                live2dModel.internalModel.requestUpdate();
             }
         }
 
