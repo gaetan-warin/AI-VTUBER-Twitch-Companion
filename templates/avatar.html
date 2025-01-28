@@ -26,6 +26,12 @@
     </div>
 
     <script>
+        const modelPath = 'model/shizuku/shizuku.model.json';
+        const synth = window.speechSynthesis;
+        const mouthState = { value: 0 };
+        let isSpeaking = false;
+        let voicesReady = false;
+
         // WebSocket configuration
         const socket = io({
             transports: ['websocket'],
@@ -33,20 +39,6 @@
             timeout: 3000
         });
 
-        // Speech synthesis setup
-        const synth = window.speechSynthesis;
-        let isSpeaking = false;
-        let live2dModel = null;
-        let voicesReady = false;
-        let coreModel = null;
-        var mouthMovement = null;
-
-        const mouthState = { value: 0 };
-
-
-        // Live2D model configuration
-        const url = 'model/shizuku/shizuku.model.json';
-        
         // Initialize application
         function main() {
             const app = new PIXI.Application({
@@ -61,9 +53,8 @@
                     mouthState.value = Math.sin(performance.now() / 200) / 2 + 0.5;
             });
         
-
             try {
-                PIXI.live2d.Live2DModel.fromModelSettingsFile(url).then(model => {
+                PIXI.live2d.Live2DModel.fromModelSettingsFile(modelPath).then(model => {
                     app.stage.addChild(model);
                     
                     model.anchor.set(0.5, 0.5);
@@ -74,20 +65,15 @@
                     model.height = size;
                     
                     const updateFn = model.internal.motionManager.update;
-                    
                     model.internal.motionManager.update = () => {
                         updateFn.call(model.internal.motionManager);
-                        
-                        // overwrite the parameter after calling original update function
                         model.internal.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
                     }
                 });
-
             } catch (error) {
                 console.error('Model loading error:', error);
             }
         }
-
 
         // Speech functions
         function speak(text) {
@@ -136,7 +122,12 @@
             synth.speak(utterance);
         }
 
-        // Event listeners
+        // Voice initialization
+        synth.onvoiceschanged = () => {
+            voicesReady = true;
+            console.log('Voices loaded:', synth.getVoices());
+        };
+
         function setupEventListeners() {
             document.getElementById('speakBtn').addEventListener('click', () => {
                 const text = document.getElementById('text-input').value.trim();
@@ -148,12 +139,6 @@
             socket.on('connect', () => console.log('WebSocket connected:', socket.id));
             socket.on('disconnect', () => console.log('WebSocket disconnected'));
         }
-
-        // Voice initialization
-        synth.onvoiceschanged = () => {
-            voicesReady = true;
-            console.log('Voices loaded:', synth.getVoices());
-        };
 
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
