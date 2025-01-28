@@ -6,12 +6,11 @@ import asyncio
 import time
 from dotenv import load_dotenv
 import os
-
 load_dotenv()
 
 TOKEN = os.getenv("TOKEN")
 CLIENT_ID = os.getenv("CLIENT_ID")
-CHANNEL_NAME = os.getenv("CHANNEL_NAME")
+CHANNEL_NAME = [os.getenv("CHANNEL_NAME")]
 PRE_PROMPT = os.getenv("PRE_PROMPT")
 API_URL = os.getenv("API_URL")
 
