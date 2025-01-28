@@ -48,12 +48,10 @@ class RedisManager(PubSubManager):  # pragma: no cover
         self.redis_url = url
         self.redis_options = redis_options or {}
         self._redis_connect()
-        super(RedisManager, self).__init__(channel=channel,
-                                           write_only=write_only,
-                                           logger=logger)
+        super().__init__(channel=channel, write_only=write_only, logger=logger)
 
     def initialize(self):
-        super(RedisManager, self).initialize()
+        super().initialize()
 
         monkey_patched = True
         if self.server.async_mode == 'eventlet':
@@ -96,8 +94,7 @@ class RedisManager(PubSubManager):  # pragma: no cover
                     self._redis_connect()
                     self.pubsub.subscribe(self.channel)
                     retry_sleep = 1
-                for message in self.pubsub.listen():
-                    yield message
+                yield from self.pubsub.listen()
             except redis.exceptions.RedisError:
                 logger.error('Cannot receive from redis... '
                              'retrying in {} secs'.format(retry_sleep))
