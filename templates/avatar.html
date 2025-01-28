@@ -36,11 +36,13 @@
         // Speech synthesis setup
         const synth = window.speechSynthesis;
         let isSpeaking = false;
-        let mouthValue = 0;
         let live2dModel = null;
         let voicesReady = false;
         let coreModel = null;
         var mouthMovement = null;
+
+        const mouthState = { value: 0 };
+
 
         // Live2D model configuration
         const url = 'model/shizuku/shizuku.model.json';
@@ -53,11 +55,11 @@
                 resizeTo: window
             });
 
-            // app.ticker.add(() => {
-            //     // mimic the interpolation value, 0-1
-            //     if(isSpeaking)
-            //         mouthValue = Math.sin(performance.now() / 200) / 2 + 0.5;
-            // });
+            app.ticker.add(() => {
+                // mimic the interpolation value, 0-1
+                if(isSpeaking)
+                    mouthState.value = Math.sin(performance.now() / 200) / 2 + 0.5;
+            });
         
 
             try {
@@ -77,7 +79,7 @@
                         updateFn.call(model.internal.motionManager);
                         
                         // overwrite the parameter after calling original update function
-                        model.internal.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthValue);
+                        model.internal.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
                     }
                 });
 
@@ -94,7 +96,7 @@
             if (isSpeaking) {
                 synth.cancel();
                 isSpeaking = false;
-                gsap.killTweensOf(window);
+                gsap.killTweensOf(mouthState);
             }
 
             const utterance = new SpeechSynthesisUtterance(text);
@@ -109,24 +111,24 @@
             utterance.onstart = () => {
                 isSpeaking = true;
                 // Animate mouth using GSAP with sine wave pattern
-                gsap.to(window, {
+                gsap.to(mouthState, {
                     duration: 0.2,
-                    mouthValue: 1,
+                    value: 1,
                     repeat: -1,
                     yoyo: true,
                     ease: "sine.inOut",
                     modifiers: {
-                        mouthValue: value => Math.abs(Math.sin(performance.now() / 200)) * 0.8
+                        value: () => Math.abs(Math.sin(performance.now() / 200)) * 0.8
                     }
                 });
             };
 
             utterance.onend = () => {
                 isSpeaking = false;
-                gsap.killTweensOf(window);
-                gsap.to(window, {
+                gsap.killTweensOf(mouthState);
+                gsap.to(mouthState, {
                     duration: 0.3,
-                    mouthValue: 0,
+                    value: 0,
                     ease: "power2.out"
                 });
             };

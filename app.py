@@ -4,24 +4,12 @@ eventlet.monkey_patch(thread=True, os=True, select=True, socket=True)
 from flask import Flask, render_template, send_from_directory
 from flask_socketio import SocketIO
 import os
-import logging
-
-# Force verbose logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 # Configure CORS properly for production
-socketio = SocketIO(
-    app,
-    cors_allowed_origins="*",
-    async_mode='eventlet',
-    logger=True,          # Enable Socket.IO logs
-    engineio_logger=True  # Enable Engine.IO logs
-)
+socketio = SocketIO( app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Unified model serving route using blueprint-like structure
 MODEL_BASE = 'model/shizuku'
@@ -38,12 +26,8 @@ def add_header(response):
 
 @app.route(f'/{MODEL_BASE}/<path:filename>')
 def serve_model_files(filename):
-    logger.debug(f"Serving model file: {filename}")
-    try:
-        return send_from_directory(MODEL_BASE, filename)
-    except FileNotFoundError:
-        logger.error(f"File not found: {filename}")
-        abort(404)
+    return send_from_directory(MODEL_BASE, filename)
+
 
 @app.route(f'/{MODEL_BASE}/shizuku1024/<path:filename>')
 def serve_textures(filename):
@@ -64,11 +48,11 @@ def serve_sounds(filename):
 # SOCKET IO BAS
 @socketio.on('connect')
 def handle_connect():
-    logger.debug("Client connected")
+    print("Client connected")
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    logger.debug("Client disconnected")
+    print("Client disconnected")
 
 @socketio.on('speak')
 def handle_speak(data):
@@ -82,7 +66,7 @@ def static_files(filename):
 
 if __name__ == '__main__':
     try:
-        logger.debug("\n🔥 Starting server...")
+        print("\n🔥 Starting server...")
         socketio.run(app, host='0.0.0.0', port=5000)
     except Exception as e:
-        logger.error(f"Error starting server: {e}")
+        print(f"Error starting server: {e}")
