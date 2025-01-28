@@ -21,12 +21,12 @@ This project implements a simple AI chatbot that uses a Live2D avatar to animate
 
 1. **Clone the repository**:
     ```bash
-    git clone https://github.com/your-username/ai-chat-bot.git
+    git clone https://github.com/gaetan-warin/SMART-AI-VTUBER.git
     cd ai-chat-bot
     ```
 
 2. **Install dependencies**:
-    Ensure you have Python 3.x and `pip` installed. Then install the required packages:
+    Ensure you have Python 3.11.9 and `pip` installed. Then install the required packages:
     ```bash
     pip install -r requirements.txt
     ```
