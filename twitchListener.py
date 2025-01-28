@@ -6,6 +6,7 @@ import asyncio
 import time
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
 
 TOKEN = os.getenv("TOKEN")
@@ -23,6 +24,7 @@ class TwitchBot(commands.Bot):
             prefix="!ai",
             initial_channels=CHANNEL_NAME,
         )
+        
         self.processing = False
         self.processing_time = 0
         self.user_last_message = {}
