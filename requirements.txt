@@ -1,8 +1,6 @@
 Flask==3.1.0
-Flask-SocketIO==5.3.2
+flask-socketio==5.3.2
 eventlet==0.33.3
 requests==2.31.0
 twitchio==2.3.0
-websocket-client==1.6.1
 asyncio
-logging

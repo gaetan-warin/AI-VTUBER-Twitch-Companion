@@ -9,6 +9,12 @@ eventlet.monkey_patch(thread=True, os=True, select=True, socket=True)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
+TOKEN = "6bcf4tmzphmf0zm8zbi84jl6likdru"
+CLIENT_ID = 'gp762nuuoqcoxypju8c569th9wz7q5'
+CHANNEL_NAME = ['ai_chat_bot']
+LIMIT_ANSWER = 200
+TTS_SOCKETIO_URL = "http://localhost:5000"  # Update to match your Socket.IO server URL
+
 # Configure SocketIO with CORS and async mode
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
@@ -71,6 +77,8 @@ def handle_speak(data):
 @app.route('/static/<path:filename>')
 def static_files(filename):
     return send_from_directory(os.path.join(app.root_path, 'static'), filename)
+
+
 
 # Main entry point
 if __name__ == '__main__':
