@@ -12,20 +12,7 @@ body {
     align-items: center;
     background: var(--background-color);
     font-family: Arial, sans-serif;
-}
-
-.container {
-    position: relative;
-    width: var(--container-width);
-    height: 70vh;
-    margin-top: 20px;
-}
-
-#live2d-canvas {
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    transition: opacity 0.5s ease;
+    background: url("/static/classroom.jpg") center / cover;
 }
 
 .controls {
@@ -65,10 +52,6 @@ button:active {
 }
 
 @media (max-width: 600px) {
-    .container {
-        height: 60vh;
-    }
-
     button {
         width: 100%;
     }
