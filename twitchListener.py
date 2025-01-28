@@ -14,6 +14,8 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CHANNEL_NAME = [os.getenv("CHANNEL_NAME")]
 PRE_PROMPT = os.getenv("PRE_PROMPT")
 API_URL = os.getenv("API_URL")
+OLLAMA_URL = os.getenv("OLLAMA_URL")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
 
 class TwitchBot(commands.Bot):
     def __init__(self):
@@ -111,8 +113,8 @@ class TwitchBot(commands.Bot):
             user_input = f"{PRE_PROMPT} Your prompt is: {user_input}."
             print(f"** User input: {user_input}")
             response = requests.post(
-                "http://localhost:11434/api/generate",
-                json={"model": "deepseek-r1:1.5b", "prompt": user_input},
+                OLLAMA_URL,
+                json={"model": OLLAMA_MODEL, "prompt": user_input},
             )
 
             if response.status_code != 200:
