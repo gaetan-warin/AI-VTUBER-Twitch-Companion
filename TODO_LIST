@@ -1,0 +1,13 @@
+Twitch => Who to respond
+Twitch => Regarding the person who send the message he should be able to manage to keep conversation or switch subject.
+UI CFG => Persona Management
+UI CFG => Twitch - Spam Management Rules
+UI CFG => Twitch - React on follow / subscribe event (Manage what to say ? / Best to have: Create some specific visual effect ?)
+UI CFG => Avatar load management
+UI CFG => Background change management
+UI CFG => Voice change management
+Speach to text to make Bot answer you directly, 
+UI CFG => Activate/desactive Microphone
+UI CFG => Config react only on some word like a "Hey, Sarah !"
+Companio as an APP => Electron JS instead of Web Browser, 
+Possibility to share screen ? How to ? Picture Each 3 sec, how to provide llm picture to make him answer on content ? Search on web ?
