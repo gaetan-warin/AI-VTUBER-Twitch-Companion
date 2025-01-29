@@ -108,4 +108,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Note**: You must have the Live2D model files and related resources to use the avatar animation functionality.
+**Note**: You must have the Live2D model files and related resources to use the avatar animation functionality. One is included in this repo as an example.
