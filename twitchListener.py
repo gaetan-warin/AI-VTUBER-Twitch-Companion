@@ -1,9 +1,7 @@
 import requests
-import json
-import re
+import time
 from twitchio.ext import commands
 import asyncio
-import time
 from dotenv import load_dotenv
 import os
 
@@ -12,17 +10,17 @@ load_dotenv()
 TOKEN = os.getenv("TOKEN")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CHANNEL_NAME = [os.getenv("CHANNEL_NAME")]
-PRE_PROMPT = os.getenv("PRE_PROMPT")
 API_URL = os.getenv("API_URL")
-OLLAMA_URL = os.getenv("OLLAMA_URL")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
+EXTRA_DELAY_LISTENER = float(os.getenv("EXTRA_DELAY_LISTENER"))
+NB_SPAM_MESSAGE = float(os.getenv("NB_SPAM_MESSAGE"))
+BOT_NAME = os.getenv("BOT_NAME")
 
 class TwitchBot(commands.Bot):
     def __init__(self):
         super().__init__(
             token=TOKEN,
             client_id=CLIENT_ID,
-            nick='AI BOTWarga',
+            nick=BOT_NAME,
             prefix="!ai",
             initial_channels=CHANNEL_NAME,
         )
@@ -30,8 +28,8 @@ class TwitchBot(commands.Bot):
         self.processing = False
         self.processing_time = 0
         self.user_last_message = {}
-        self.spam_time_window = 3
-        self.extra_delay = 3
+        self.spam_time_window = NB_SPAM_MESSAGE
+        self.extra_delay = EXTRA_DELAY_LISTENER
 
     async def event_ready(self):
         print(f"Logged in as | {self.nick}")
@@ -63,88 +61,24 @@ class TwitchBot(commands.Bot):
             self.processing = True
             self.processing_time = current_time
 
-            response = self.generate_ai_response(user_input)
-            # print(f"*** BOTWarga answer: {response}")
-            await self.send_to_tts(response)
+            try:
+                response = requests.post(
+                    f"{API_URL}/process_message",
+                    json={"message": user_input}
+                )
+                
+                if response.status_code != 200:
+                    print(f"Error from server: {response.status_code}")
+                    print(f"Error response: {response.text}")
+                    
+            except Exception as e:
+                print(f"Error sending message to server: {e}")
 
-            await self._wait_for_extra_delay()
-            self.processing = False
-
-    async def send_to_tts(self, text):
-        """Send text to the server via a RESTful POST request."""
-        try:
-            # Prepare the payload
-            payload = {'text': text}
-            # Send the POST request to the TTS API
-            response = requests.post(f"{API_URL}/trigger_speak", json=payload)
-            
-            # Check the response from the TTS server
-            if response.status_code == 200:
-                print("")
-                print(f"Successfully sent to server: {text}")
-                print("")
-
-            else:
-                print(f"Error sending to server. Status code: {response.status_code}")
-        except Exception as e:
-            print(f"Error sending to server: {e}")
+                await self._wait_for_extra_delay()
+                self.processing = False
 
     async def _wait_for_extra_delay(self):
         await asyncio.sleep(self.extra_delay)
-
-    def split_message(self, message, limit=300):
-        chunks = []
-        while len(message) > limit:
-            split_point = max(
-                message.rfind('. ', 0, limit),
-                message.rfind('? ', 0, limit),
-                message.rfind('! ', 0, limit)
-            )
-            if split_point == -1:
-                split_point = limit
-            chunks.append(message[:split_point].strip())
-            message = message[split_point:].strip()
-        if message:
-            chunks.append(message)
-        return chunks
-
-    def generate_ai_response(self, user_input):
-        try:
-            user_input = f"{PRE_PROMPT} Your prompt is: {user_input}."
-            print(f"** User input: {user_input}")
-            response = requests.post(
-                OLLAMA_URL,
-                json={"model": OLLAMA_MODEL, "prompt": user_input},
-            )
-
-            if response.status_code != 200:
-                print(f"Failed to get a response from the AI API. Status code: {response.status_code}")
-                return f"Error: Failed to get a response from the AI API. Status code: {response.status_code}"
-
-            full_response = []
-            for line in response.text.splitlines():
-                try:
-                    response_data = json.loads(line)
-                    if response_data.get('done', False):
-                        full_response.append(response_data.get('response', ''))
-                        break
-                    else:
-                        full_response.append(response_data.get('response', ''))
-                except Exception as e:
-                    print(f"Error parsing line: {e}")
-            final_response = ''.join(full_response).strip()
-            cleaned_response = self.clean_response(final_response)
-            return cleaned_response
-        except Exception as e:
-            print(f"Error generating AI response: {e}")
-            return f"Error: {str(e)}"
-
-    def clean_response(self, response):
-        response = re.sub(r'<think>\s*.*?\s*</think>', '', response, flags=re.DOTALL)
-        response = re.sub(r'[^\x00-\x7F]+', '', response)
-        response = re.sub(r'\\_\\_\\_', '', response)
-        response = re.sub(r'\s+', ' ', response).strip()
-        return response
 
 if __name__ == "__main__":
     bot = TwitchBot()
