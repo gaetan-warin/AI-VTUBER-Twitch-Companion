@@ -6,8 +6,10 @@ UI CFG => Twitch - React on follow / subscribe event (Manage what to say ? / Bes
 UI CFG => Avatar load management
 UI CFG => Background change management
 UI CFG => Voice change management
+UI CFG => LLM Management (wich Ollama LLM use)
 Speach to text to make Bot answer you directly, 
 UI CFG => Activate/desactive Microphone
 UI CFG => Config react only on some word like a "Hey, Sarah !"
-Companio as an APP => Electron JS instead of Web Browser, 
+Companio as an APP => Electron JS instead of Web Browser,
+UI CFG => LLM Management extension (use Local or Cloud API LLM)
 Possibility to share screen ? How to ? Picture Each 3 sec, how to provide llm picture to make him answer on content ? Search on web ?

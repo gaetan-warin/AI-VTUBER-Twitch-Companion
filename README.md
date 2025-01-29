@@ -1,23 +1,26 @@
 # AI Chat Twitch Bot with Live2D Avatar
 
-This project implements a simple AI chatbot that interacts with Twitch chat, using a Live2D avatar to animate and speak in response to user input. The system leverages WebSockets to facilitate communication between the frontend (browser) and backend (Flask server) and integrates speech synthesis for the avatar's dialogue.
+This project implements an AI chatbot that interacts with Twitch chat using a Live2D avatar to animate and speak in response to user input. The system leverages WebSockets for real-time communication between the frontend (browser) and backend (Flask server), integrates speech synthesis for the avatar's dialogue, and uses Ollama for local LLM-powered responses.
 
 ## Features
 
-- **Live2D Avatar**: A 3D model that moves and speaks in response to chat messages.
-- **Twitch Integration**: The bot responds to messages in a Twitch channel in real time.
-- **Speech Synthesis**: The avatar speaks text entered by the Twitch chat using text-to-speech (TTS) technology.
-- **WebSocket Communication**: Real-time interaction between the frontend and backend.
-- **Avatar Animation**: The mouth of the avatar animates in sync with the speech using sine wave patterns.
+- **Live2D Avatar**: A 3D model that moves and speaks in response to chat messages
+- **Twitch Integration**: The bot responds to messages in a Twitch channel in real time
+- **Local LLM Integration**: Uses Ollama for generating AI responses locally
+- **Speech Synthesis**: The avatar speaks responses using text-to-speech (TTS) technology
+- **WebSocket Communication**: Real-time interaction between the frontend and backend
+- **Avatar Animation**: The mouth of the avatar animates in sync with the speech using sine wave patterns
+- **Spam Protection**: Built-in protection against message spam and duplicate messages
 
 ## Requirements
 
 - **Python 3.11.9**
-- **Flask**: Web framework for serving the application.
-- **Flask-SocketIO**: To enable WebSocket communication between the client and the server.
-- **eventlet**: Required for asynchronous communication with SocketIO.
-- **Live2D Model Files**: A 3D model used for the avatar animations.
-- **Twitch API Token**: To connect to Twitch chat and listen for user messages.
+- **Flask**: Web framework for serving the application
+- **Flask-SocketIO**: To enable WebSocket communication between the client and the server
+- **eventlet**: Required for asynchronous communication with SocketIO
+- **Live2D Model Files**: A 3D model used for the avatar animations
+- **Twitch API Token**: To connect to Twitch chat and listen for user messages
+- **Ollama**: Local LLM server for generating responses
 
 ## Setup
 
@@ -34,60 +37,68 @@ This project implements a simple AI chatbot that interacts with Twitch chat, usi
     ```
 
 3. **Configure your `.env` file**:
-    Create a `.env` file in the root directory and add your Twitch credentials and other settings:
+    Create a `.env` file in the root directory and add your configuration:
     ```env
     TOKEN=YOUR_TWITCH_TOKEN
     CLIENT_ID=YOUR_TWITCH_CLIENT_ID
     CHANNEL_NAME=YOUR_CHANNEL_NAME
     PRE_PROMPT="Respond in less than 150 characters and be as consistent as possible."
     API_URL=http://localhost:5000/
+    OLLAMA_URL=http://127.0.0.1:11434/api/generate
+    OLLAMA_MODEL=deepseek-r1:1.5b
+    EXTRA_DELAY_LISTENER=3
+    NB_SPAM_MESSAGE=3
+    BOT_NAME=YOUR_BOT_NAME
     ```
 
 4. **Model Files**:
-    - The model files (e.g., `shizuku.model.json`) should be placed under the `model/shizuku` directory.
-    - Make sure all necessary textures, expressions, and motion files are available within their respective subdirectories.
+    - Place the model files (e.g., `shizuku.model.json`) under the `model/shizuku` directory
+    - Ensure all necessary textures, expressions, and motion files are available within their respective subdirectories
 
-5. **Run the Application**:
+5. **Start Ollama**:
+    - Install Ollama from [ollama.ai](https://ollama.ai)
+    - Pull the deepseek-r1:1.5b model or your preferred model
+    - Start the Ollama server
+
+6. **Run the Application**:
     Start the Flask server with WebSocket support:
     ```bash
     python app.py
     ```
 
-6. Open your browser and visit [http://localhost:5000](http://localhost:5000) to see the avatar.
+7. Open your browser and visit [http://localhost:5000](http://localhost:5000) to see the avatar.
 
-## Frontend Overview
+## Environment Variables
 
-- **HTML**: Contains a text input field and a button to trigger the avatar to speak.
-- **JS**: Utilizes the `speechSynthesis` API for speech generation and synchronizes the Live2D model's mouth movements with speech.
-- **WebSocket**: Handles communication with the Flask backend to receive and emit speech data.
-
-## Backend Overview
-
-- **Flask Server**: The backend is built using Flask, which serves the web page, model files, and other static resources.
-- **SocketIO**: Used to handle real-time communication for sending and receiving the speech text to be spoken by the avatar.
-- **Twitch Integration**: The bot listens for chat messages in a specified Twitch channel and responds using speech synthesis.
+- `TOKEN`: Your Twitch OAuth token
+- `CLIENT_ID`: Your Twitch application client ID
+- `CHANNEL_NAME`: The Twitch channel to monitor
+- `PRE_PROMPT`: System prompt for the LLM to maintain consistent responses
+- `API_URL`: URL of your Flask server
+- `OLLAMA_URL`: URL of your Ollama server
+- `OLLAMA_MODEL`: The Ollama model to use (default: deepseek-r1:1.5b)
+- `EXTRA_DELAY_LISTENER`: Delay between processing messages (in seconds)
+- `NB_SPAM_MESSAGE`: Time window for spam detection (in seconds)
+- `BOT_NAME`: Name of your Twitch bot
 
 ## How It Works
 
-1. **User Input via Twitch**: The bot listens for messages in the specified Twitch channel.
-2. **WebSocket Communication**: The message is sent via WebSocket to the backend server.
-3. **Speech Synthesis**: The backend sends the text to the frontend, where it’s spoken using the browser's `speechSynthesis` API.
-4. **Avatar Animation**: The avatar's mouth opens and closes to simulate speech using GSAP (GreenSock Animation Platform).
+1. **User Input via Twitch**: Users send messages in the Twitch chat using the `!ai` prefix
+2. **Spam Protection**: Messages are checked for spam and duplicate content
+3. **LLM Processing**: Valid messages are processed by Ollama to generate contextual responses
+4. **WebSocket Communication**: Responses are sent via WebSocket to the frontend
+5. **Speech Synthesis**: The frontend converts the text to speech using the browser's `speechSynthesis` API
+6. **Avatar Animation**: The avatar's mouth moves in sync with the speech using GSAP animations
 
-## Endpoints
+## Architecture
 
-- `GET /`: Renders the main web page with the avatar and chat interface.
-- `POST /trigger_speak`: Triggers speech synthesis on the backend by sending a JSON object containing the text to speak.
-- `GET /static/<path:filename>`: Serves static files such as JavaScript, CSS, and images.
-- `GET /model/shizuku/<path:filename>`: Serves model-related files like textures and motion data.
+- **Frontend**: HTML5, JavaScript with WebSocket support, Live2D SDK
+- **Backend**: Flask server with SocketIO for real-time communication
+- **AI**: Local LLM using Ollama for generating responses
+- **Twitch Integration**: TwitchIO for chat interaction
+- **Animation**: GSAP for smooth mouth movements
 
-## Example Usage
-
-- The bot will listen for chat messages in the configured Twitch channel.
-- It will animate the Live2D avatar and speak the message text using TTS.
-- You can interact with the bot by sending text via Twitch chat.
-
-## Contribution
+## Contributing
 
 Feel free to fork the repository, submit issues, and create pull requests. Contributions are welcome!
 
