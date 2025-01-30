@@ -14,9 +14,39 @@
     <script src="static/gsap.min.js"></script>
     <script src="static/socket.io.min.js"></script>
     <link rel="stylesheet" href="static/style.css">
+    <style>
+        .speech-bubble {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 15px 25px;
+            max-width: 300px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .speech-bubble:after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            border-width: 15px 15px 0;
+            border-style: solid;
+            border-color: rgba(255, 255, 255, 0.9) transparent;
+            transform: translateX(-50%);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
+    <div id="speech-bubble" class="speech-bubble"></div>
 
     <div class="controls">
         <div class="input-group">
@@ -31,6 +61,7 @@
         const mouthState = { value: 0 };
         let isSpeaking = false;
         let voicesReady = false;
+        let currentModel = null;
 
         // WebSocket configuration
         const socket = io({
@@ -58,6 +89,7 @@
             try {
                 PIXI.live2d.Live2DModel.fromModelSettingsFile(modelPath).then(model => {
                     app.stage.addChild(model);
+                    currentModel = model;
                     
                     model.anchor.set(0.5, 0.5);
                     model.position.set(innerWidth / 2, innerHeight / 2);
@@ -83,6 +115,26 @@
             console.log('Voices loaded:', synth.getVoices());
         };
 
+        function showSpeechBubble(text) {
+            const bubble = document.getElementById('speech-bubble');
+            bubble.textContent = text;
+            bubble.style.display = 'block';
+
+            if (currentModel) {
+                const bounds = currentModel.getBounds();
+                const x = window.innerWidth / 2;
+                const y = (window.innerHeight / 2) - bounds.height / 2 - 50;
+                
+                bubble.style.left = `${x - bubble.offsetWidth / 2}px`;
+                bubble.style.top = `${y}px`;
+            }
+        }
+
+        function hideSpeechBubble() {
+            const bubble = document.getElementById('speech-bubble');
+            bubble.style.display = 'none';
+        }
+
         // Speech functions
         function speak(text) {
             if (!text || !voicesReady) {
@@ -94,6 +146,7 @@
                 synth.cancel();
                 isSpeaking = false;
                 gsap.killTweensOf(mouthState);
+                hideSpeechBubble();
             }
 
             // Split text into chunks based on sentence endings (., !, ?)
@@ -120,7 +173,10 @@
             // Function to speak each sentence
             function speakNextSentence() {
                 if (sentenceIndex < sentences.length) {
-                    const utterance = new SpeechSynthesisUtterance(sentences[sentenceIndex]);
+                    const currentSentence = sentences[sentenceIndex];
+                    showSpeechBubble(currentSentence);
+                    
+                    const utterance = new SpeechSynthesisUtterance(currentSentence);
                     const voice = synth.getVoices().find(v => v.name.includes('Female')) || synth.getVoices()[0];
 
                     Object.assign(utterance, {
@@ -156,6 +212,7 @@
                                 value: 0,
                                 ease: "power2.out"
                             });
+                            hideSpeechBubble();
                         }
                     };
 
