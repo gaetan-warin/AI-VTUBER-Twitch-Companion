@@ -53,13 +53,14 @@
 
     <div class="controls">
         <div class="input-group">
-            <textarea id="text-input" placeholder="Enter text for the avatar to speak..."></textarea>
+            <textarea id="makeItSpeak" placeholder="Enter text for the avatar to speak..."></textarea>
             <button id="speakBtn">Speak</button>
         </div>
     </div>
 
     <script>
-        const modelPath = 'model/shizuku/shizuku.model.json';
+        let modelPath = '';
+
         const synth = window.speechSynthesis;
         const mouthState = { value: 0 };
         let isSpeaking = false;
@@ -75,6 +76,11 @@
 
         // Initialize application
         function main() {
+            if (!modelPath) {
+                console.error('Model path not set.');
+                return;
+            }
+
             const app = new PIXI.Application({
                 view: document.getElementById('canvas'),
                 autoStart: true,
@@ -229,13 +235,34 @@
 
         function setupEventListeners() {
             document.getElementById('speakBtn').addEventListener('click', () => {
-                const text = document.getElementById('text-input').value.trim();
-                if (text) socket.emit('speak', { text });
+                const inputField = document.getElementById('makeItSpeak');
+                const text = inputField.value.trim();
+                if (text) {
+                    socket.emit('speak', { text });
+                    inputField.value = ''; // Clear the input field
+                }
+            });
+
+            document.getElementById('makeItSpeak').addEventListener('keydown', (event) => {
+                if (event.ctrlKey && event.key === 'Enter') {
+                    const inputField = event.target;
+                    const text = inputField.value.trim();
+                    if (text) {
+                        socket.emit('speak', { text });
+                        inputField.value = ''; // Clear the input field
+                    }
+                }
             });
 
             socket.on('speak_text', data => {
                 console.log("Received text to speak:", data.text);
                 speak(data.text);
+            });
+
+            socket.on('model_path', data => {
+                modelPath = data.path;
+                console.log("Received model path:", modelPath);
+                main();
             });
             
             socket.on('connect', () => console.log('WebSocket connected:', socket.id));
@@ -246,7 +273,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
             socket.connect();
-            main();
+            socket.emit('request_model_path');
         });
     </script>
 </body>

@@ -28,11 +28,11 @@ SOCKETIO_IP_PORT = os.getenv("SOCKETIO_IP_PORT")
 API_URL = os.getenv("API_URL")
 API_URL_PORT = os.getenv("API_URL_PORT")
 
+DEFAULT_AVATAR_MODEL = os.getenv("API_URL_PORT")
+
 # Configure SocketIO with CORS and async mode
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-# Model base path
-MODEL_BASE = 'model/shizuku'
 
 # Serve the home page
 @app.route('/')
@@ -115,6 +115,13 @@ def process_message():
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+@app.route('/get_model', methods=['GET'])
+def getModel():
+    avatar_model_path = "models/shizuku/shizuku.model.json"
+    if (avatar_model_path ==  "shizuku"):
+        avatar_model_path = "models/shizuku/shizuku.model.json"
+    return avatar_model_path
 
 def clean_response(response):
     response = re.sub(r'<think>\s*.*?\s*</think>', '', response, flags=re.DOTALL)
@@ -124,25 +131,13 @@ def clean_response(response):
     return response
 
 # Serve model files and resources (textures, expressions, motions, sounds)
-@app.route(f'/{MODEL_BASE}/<path:filename>')
+@app.route('/models/<path:filename>')
 def serve_model_files(filename):
-    return send_from_directory(MODEL_BASE, filename)
-
-@app.route(f'/{MODEL_BASE}/shizuku1024/<path:filename>')
-def serve_textures(filename):
-    return send_from_directory(f'{MODEL_BASE}/shizuku1024', filename)
-
-@app.route(f'/{MODEL_BASE}/expressions/<path:filename>')
-def serve_expressions(filename):
-    return send_from_directory(f'{MODEL_BASE}/expressions', filename)
-
-@app.route(f'/{MODEL_BASE}/motions/<path:filename>')
-def serve_motions(filename):
-    return send_from_directory(f'{MODEL_BASE}/motions', filename)
-
-@app.route(f'/{MODEL_BASE}/sounds/<path:filename>')
-def serve_sounds(filename):
-    return send_from_directory(f'{MODEL_BASE}/sounds', filename)
+    models_dir = os.path.join(app.root_path, 'models')
+    if os.path.isfile(os.path.join(models_dir, filename)):
+        return send_from_directory(models_dir, filename)
+    else:
+        abort(404)
 
 # SocketIO event handlers
 @socketio.on('connect')
@@ -158,6 +153,11 @@ def handle_speak(data):
     text = data.get('text', '').strip()
     if text:
         socketio.emit('speak_text', {'text': text})
+
+@socketio.on('request_model_path')
+def handle_request_model_path():
+    avatar_model_path = "models/shizuku/shizuku.model.json"
+    socketio.emit('model_path', {'path': avatar_model_path})
 
 # Serve static files
 @app.route('/static/<path:filename>')
