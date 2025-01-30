@@ -58,8 +58,11 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 
 4. **Model Files**:
     (Optional) : if you want to change model file:
-    - Place the model files (e.g., `shizuku.model.json`) under the `model/shizuku` directory
+    - Place the model folder under the `model/` directory
     - Ensure all necessary textures, expressions, and motion files are available within their respective subdirectories
+    
+    /!\ This repo work with .moc (Live2D Cubism 2.0) model
+    Info: [Live2d](https://www.live2d.com/en/)
 
 5. **Start Ollama**:
     - Install Ollama from [ollama.ai](https://ollama.ai)
@@ -76,16 +79,19 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 
 ## Environment Variables
 
-- `TOKEN`: Your Twitch OAuth token
-- `CLIENT_ID`: Your Twitch application client ID
-- `CHANNEL_NAME`: The Twitch channel to monitor
 - `PRE_PROMPT`: System prompt for the LLM to maintain consistent responses
-- `API_URL`: URL of your Flask server
+- `SOCKETIO_IP` : IP for socket.io
+- `SOCKETIO_IP_PORT` : Port for socket.io
+- `API_URL`: IP of flash server
+- `API_URL_PORT`: Port of flash server
 - `OLLAMA_URL`: URL of your Ollama server
 - `OLLAMA_MODEL`: The Ollama model to use (default: deepseek-r1:1.5b)
+- `TOKEN`: Your Twitch OAuth token
+- `CLIENT_ID`: Your Twitch application client ID
+- `BOT_NAME`: Name of your Twitch bot
+- `CHANNEL_NAME`: The Twitch channel to monitor
 - `EXTRA_DELAY_LISTENER`: Delay between processing messages (in seconds)
 - `NB_SPAM_MESSAGE`: Time window for spam detection (in seconds)
-- `BOT_NAME`: Name of your Twitch bot
 
 ## How It Works
 
