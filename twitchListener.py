@@ -67,7 +67,7 @@ class TwitchBot(commands.Bot):
 
             try:
                 response = requests.post(
-                    f"{API_URL}:{API_URL_PORT}/process_message",
+                    f"{API_URL}:{API_URL_PORT}/trigger_ai_request",
                     json={"message": user_input}
                 )
                 

@@ -34,12 +34,13 @@ DEFAULT_AVATAR_MODEL = os.getenv("API_URL_PORT")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 
-# Serve the home page
+'''
+# ROUTE FUNCTIO
+'''
 @app.route('/')
 def home():
     return render_template('avatar.html')
 
-# Trigger speak endpoint
 @app.route('/trigger_speak', methods=['POST'])
 def trigger_speak():
     data = request.get_json()
@@ -50,45 +51,8 @@ def trigger_speak():
         return jsonify({'status': 'success', 'message': 'Text sent to speak'}, 200)
     return jsonify({'status': 'error', 'message': 'No text provided'}, 400)
 
-def process_ai_request(user_input):
-    if not user_input:
-        return {'status': 'error', 'message': 'No message provided'}, 400
-
-    if not OLLAMA_URL or not OLLAMA_MODEL:
-        return {'status': 'error', 'message': 'Missing OLLAMA configuration'}, 500
-
-    formatted_input = f"{PRE_PROMPT} Your prompt is: {user_input}." if PRE_PROMPT else user_input
-    try:
-        response = requests.post(
-            OLLAMA_URL,
-            json={"model": OLLAMA_MODEL, "prompt": formatted_input},
-            timeout=30
-        )
-        if response.status_code == 200:
-            full_response = []
-            for line in response.text.splitlines():
-                try:
-                    response_data = json.loads(line)
-                    if response_data.get('done', False):
-                        full_response.append(response_data.get('response', ''))
-                        break
-                    else:
-                        full_response.append(response_data.get('response', ''))
-                except json.JSONDecodeError as e:
-                    print(f"Error parsing JSON line: {e}")
-                    print(f"Problematic line: {line}")
-                except Exception as e:
-                    print(f"Unexpected error parsing line: {e}")
-            final_response = ''.join(full_response).strip()
-            cleaned_response = clean_response(final_response)
-            return {'status': 'success', 'message': cleaned_response}, 200
-        else:
-            return {'status': 'error', 'message': f'LLM API error: {response.status_code}'}, 500
-    except requests.RequestException as e:
-        return {'status': 'error', 'message': f'Request error: {str(e)}'}, 500
-
-@app.route('/process_message', methods=['POST'])
-def process_message():
+@app.route('/trigger_ai_request', methods=['POST'])
+def trigger_ai_request():
     try:
         data = request.get_json()
         if not data:
@@ -109,13 +73,6 @@ def getModel():
         avatar_model_path = "models/shizuku/shizuku.model.json"
     return avatar_model_path
 
-def clean_response(response):
-    response = re.sub(r'<think>\s*.*?\s*</think>', '', response, flags=re.DOTALL)
-    response = re.sub(r'[^\x00-\x7F]+', '', response)
-    response = re.sub(r'\\_\\_\\_', '', response)
-    response = re.sub(r'\s+', ' ', response).strip()
-    return response
-
 # Serve model files and resources (textures, expressions, motions, sounds)
 @app.route('/models/<path:filename>')
 def serve_model_files(filename):
@@ -124,26 +81,20 @@ def serve_model_files(filename):
         return send_from_directory(models_dir, filename)
     else:
         abort(404)
+    
+# Serve JS/CSS/PICTURE File
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 
-# SocketIO event handlers
-@socketio.on('connect')
-def handle_connect():
-    print("Client connected")
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    print("Client disconnected")
-
+'''
+# SOCKETIO HANDLER
+'''
 @socketio.on('speak')
 def handle_speak(data):
     text = data.get('text', '').strip()
     if text:
         socketio.emit('speak_text', {'text': text})
-
-@socketio.on('request_model_path')
-def handle_request_model_path():
-    avatar_model_path = "models/shizuku/shizuku.model.json"
-    socketio.emit('model_path', {'path': avatar_model_path})
 
 @socketio.on('ask_ai')
 def handle_ask_ai(data):
@@ -152,14 +103,73 @@ def handle_ask_ai(data):
     if status_code == 200:
         socketio.emit('ai_response', {'text': response['message']})
 
-# Serve static files
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
+@socketio.on('request_model_path')
+def handle_request_model_path():
+    avatar_model_path = "models/shizuku/shizuku.model.json"
+    socketio.emit('model_path', {'path': avatar_model_path})
+
+@socketio.on('connect')
+def handle_connect():
+    print("Client connected")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print("Client disconnected")
+
+'''
+# PROCESS FUNCTION
+'''
+def process_ai_request(user_input):
+    if not user_input:
+        return {'status': 'error', 'message': 'No message provided'}, 400
+
+    if not OLLAMA_URL or not OLLAMA_MODEL:
+        return {'status': 'error', 'message': 'Missing OLLAMA configuration'}, 500
+
+    formatted_input = f"{PRE_PROMPT} Your prompt is: {user_input}." if PRE_PROMPT else user_input
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={"model": OLLAMA_MODEL, "prompt": formatted_input},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            full_response = []
+            for line in response.text.splitlines():
+                try:
+                    response_data = json.loads(line)
+                    if response_data.get('done', False):
+                        full_response.append(response_data.get('response', ''))
+                        break
+                    else:
+                        full_response.append(response_data.get('response', ''))
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing JSON line: {e}")
+                    print(f"Problematic line: {line}")
+                except Exception as e:
+                    print(f"Unexpected error parsing line: {e}")
+                    
+            final_response = ''.join(full_response).strip()
+            cleaned_response = clean_response(final_response)
+            
+            return {'status': 'success', 'message': cleaned_response}, 200
+        else:
+            return {'status': 'error', 'message': f'LLM API error: {response.status_code}'}, 500
+    except requests.RequestException as e:
+        return {'status': 'error', 'message': f'Request error: {str(e)}'}, 500
+    
+def clean_response(response):
+    response = re.sub(r'<think>\s*.*?\s*</think>', '', response, flags=re.DOTALL)
+    response = re.sub(r'[^\x00-\x7F]+', '', response)
+    response = re.sub(r'\\_\\_\\_', '', response)
+    response = re.sub(r'\s+', ' ', response).strip()
+    return response
 
 
-
-# Main entry point
+'''
+# SERVER FUNCTION
+'''
 if __name__ == '__main__': 
     try: 
         print(f"\n🔥 Starting server at  {API_URL}:{API_URL_PORT}...") 

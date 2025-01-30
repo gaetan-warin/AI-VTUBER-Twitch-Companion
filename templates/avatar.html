@@ -14,56 +14,6 @@
     <script src="static/gsap.min.js"></script>
     <script src="static/socket.io.min.js"></script>
     <link rel="stylesheet" href="static/style.css">
-    <style>
-        .speech-bubble {
-            position: fixed;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 20px;
-            padding: 15px 25px;
-            max-width: 300px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            display: none;
-            z-index: 1000;
-            animation: fadeIn 0.3s ease-in;
-            font-family: 'Arial', sans-serif;
-            font-size: 14px;
-            color: #333;
-        }
-
-        .speech-bubble:after {
-            content: '';
-            position: absolute;
-            bottom: -15px;
-            left: 50%;
-            border-width: 15px 15px 0;
-            border-style: solid;
-            border-color: #f5f7fa transparent;
-            transform: translateX(-50%);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .button-group {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .button-group button {
-            flex: 1;
-            margin: 0 5px;
-        }
-    </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
