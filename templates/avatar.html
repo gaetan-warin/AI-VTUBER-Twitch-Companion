@@ -17,14 +17,17 @@
     <style>
         .speech-bubble {
             position: fixed;
-            background: rgba(255, 255, 255, 0.9);
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             border-radius: 20px;
             padding: 15px 25px;
             max-width: 300px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             display: none;
             z-index: 1000;
             animation: fadeIn 0.3s ease-in;
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+            color: #333;
         }
 
         .speech-bubble:after {
@@ -34,7 +37,7 @@
             left: 50%;
             border-width: 15px 15px 0;
             border-style: solid;
-            border-color: rgba(255, 255, 255, 0.9) transparent;
+            border-color: #f5f7fa transparent;
             transform: translateX(-50%);
         }
 
@@ -149,62 +152,53 @@
                 hideSpeechBubble();
             }
 
-            // Split text into chunks based on sentence endings (., !, ?)
-            const sentenceEndRegex = /([.!?])\s*/g;
-            const sentences = [];
-            let lastIndex = 0;
+            // Split text into sentences and wait times
+            const parts = text.split(/(\{\*\d+\*\})|([.!?]\s+)/).filter(Boolean);
 
-            // Capture sentences
-            while ((match = sentenceEndRegex.exec(text)) !== null) {
-                const sentence = text.slice(lastIndex, match.index + match[0].length).trim();
-                if (sentence) {
-                    sentences.push(sentence);
-                }
-                lastIndex = match.index + match[0].length;
-            }
+            let partIndex = 0;
 
-            // Add remaining text if any
-            if (lastIndex < text.length) {
-                sentences.push(text.slice(lastIndex).trim());
-            }
+            // Function to speak each part
+            function speakNextPart() {
+                if (partIndex < parts.length) {
+                    let currentPart = parts[partIndex];
+                    const waitMatch = currentPart.match(/\{\*(\d+)\*\}/);
 
-            let sentenceIndex = 0;
+                    if (waitMatch) {
+                        const waitTime = parseInt(waitMatch[1], 10) * 1000;
+                        setTimeout(() => {
+                            partIndex++;
+                            speakNextPart();
+                        }, waitTime);
+                    } else {
+                        // Remove punctuation from the part to be spoken
+                        const textToSpeak = currentPart.replace(/[.!?]/g, '').trim();
+                        showSpeechBubble(textToSpeak); // Show speech bubble when starting to speak
+                        
+                        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                        const voice = synth.getVoices().find(v => v.name.includes('Female')) || synth.getVoices()[0];
 
-            // Function to speak each sentence
-            function speakNextSentence() {
-                if (sentenceIndex < sentences.length) {
-                    const currentSentence = sentences[sentenceIndex];
-                    showSpeechBubble(currentSentence);
-                    
-                    const utterance = new SpeechSynthesisUtterance(currentSentence);
-                    const voice = synth.getVoices().find(v => v.name.includes('Female')) || synth.getVoices()[0];
-
-                    Object.assign(utterance, {
-                        voice: voice,
-                        pitch: 1.1,
-                        rate: 0.95
-                    });
-
-                    utterance.onstart = () => {
-                        isSpeaking = true;
-                        // Animate mouth using GSAP with sine wave pattern
-                        gsap.to(mouthState, {
-                            duration: 0.2,
-                            value: 1,
-                            repeat: -1,
-                            yoyo: true,
-                            ease: "sine.inOut",
-                            modifiers: {
-                                value: () => Math.abs(Math.sin(performance.now() / 200)) * 0.8
-                            }
+                        Object.assign(utterance, {
+                            voice: voice,
+                            pitch: 1.1,
+                            rate: 0.95
                         });
-                    };
 
-                    utterance.onend = () => {
-                        sentenceIndex++;
-                        if (sentenceIndex < sentences.length) {
-                            speakNextSentence(); // Speak the next sentence
-                        } else {
+                        utterance.onstart = () => {
+                            isSpeaking = true;
+                            // Animate mouth using GSAP with sine wave pattern
+                            gsap.to(mouthState, {
+                                duration: 0.2,
+                                value: 1,
+                                repeat: -1,
+                                yoyo: true,
+                                ease: "sine.inOut",
+                                modifiers: {
+                                    value: () => Math.abs(Math.sin(performance.now() / 200)) * 0.8
+                                }
+                            });
+                        };
+
+                        utterance.onend = () => {
                             isSpeaking = false;
                             gsap.killTweensOf(mouthState);
                             gsap.to(mouthState, {
@@ -212,15 +206,17 @@
                                 value: 0,
                                 ease: "power2.out"
                             });
-                            hideSpeechBubble();
-                        }
-                    };
+                            hideSpeechBubble(); // Hide speech bubble when speech ends
+                            partIndex++;
+                            speakNextPart();
+                        };
 
-                    synth.speak(utterance);
+                        synth.speak(utterance);
+                    }
                 }
             }
 
-            speakNextSentence(); // Start speaking the first sentence
+            speakNextPart(); // Start speaking the first part
         }
 
 
