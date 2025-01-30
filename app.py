@@ -158,9 +158,9 @@ def static_files(filename):
 
 
 # Main entry point
-if __name__ == '__main__':
-    try:
-        print("\n🔥 Starting server...")
-        socketio.run(app, host='0.0.0.0', port=5000)
-    except Exception as e:
+if __name__ == '__main__': 
+    try: 
+        print("\n🔥 Starting server at http://localhost:5000 ...") 
+        socketio.run(app, host='0.0.0.0', port=5000) 
+    except Exception as e: 
         print(f"Error starting server: {e}")
