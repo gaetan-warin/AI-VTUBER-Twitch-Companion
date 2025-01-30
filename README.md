@@ -26,8 +26,8 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 
 1. **Clone the repository**:
     ```bash
-    git clone https://github.com/gaetan-warin/SMART-AI-VTUBER.git
-    cd ai-chat-bot
+    git clone https://github.com/gaetan-warin/AI-VTUBER-Twitch-Companion-.git
+    cd AI-VTUBER-Twitch-Companion-
     ```
 
 2. **Install dependencies**:
@@ -39,19 +39,25 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 3. **Configure your `.env` file**:
     Create a `.env` file in the root directory and add your configuration:
     ```env
-    TOKEN=YOUR_TWITCH_TOKEN
-    CLIENT_ID=YOUR_TWITCH_CLIENT_ID
-    CHANNEL_NAME=YOUR_CHANNEL_NAME
+    # Avatar Server
     PRE_PROMPT="Respond in less than 150 characters and be as consistent as possible."
-    API_URL=http://localhost:5000/
+    API_URL=http://127.0.0.1
+    API_URL_PORT=5000
     OLLAMA_URL=http://127.0.0.1:11434/api/generate
     OLLAMA_MODEL=deepseek-r1:1.5b
+
+
+    # Twitch
+    TOKEN=YOUR_TWITCH_TOKEN
+    CLIENT_ID=YOUR_TWITCH_CLIENT_ID
+    BOT_NAME=ai_chat_bot
+    CHANNEL_NAME=YOUR_CHANNEL_NAME
     EXTRA_DELAY_LISTENER=3
     NB_SPAM_MESSAGE=3
-    BOT_NAME=YOUR_BOT_NAME
     ```
 
 4. **Model Files**:
+    (Optional) : if you want to change model file:
     - Place the model files (e.g., `shizuku.model.json`) under the `model/shizuku` directory
     - Ensure all necessary textures, expressions, and motion files are available within their respective subdirectories
 

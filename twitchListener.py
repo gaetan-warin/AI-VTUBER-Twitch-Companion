@@ -7,13 +7,17 @@ import os
 
 load_dotenv()
 
+# Twitch CFG
 TOKEN = os.getenv("TOKEN")
 CLIENT_ID = os.getenv("CLIENT_ID")
+BOT_NAME = os.getenv("BOT_NAME")
 CHANNEL_NAME = [os.getenv("CHANNEL_NAME")]
-API_URL = os.getenv("API_URL")
 EXTRA_DELAY_LISTENER = float(os.getenv("EXTRA_DELAY_LISTENER"))
 NB_SPAM_MESSAGE = float(os.getenv("NB_SPAM_MESSAGE"))
-BOT_NAME = os.getenv("BOT_NAME")
+
+# Avatar server URL
+API_URL = os.getenv("API_URL")
+API_URL_PORT = os.getenv("API_URL_PORT")
 
 class TwitchBot(commands.Bot):
     def __init__(self):
@@ -63,7 +67,7 @@ class TwitchBot(commands.Bot):
 
             try:
                 response = requests.post(
-                    f"{API_URL}/process_message",
+                    f"{API_URL}:{API_URL_PORT}/process_message",
                     json={"message": user_input}
                 )
                 

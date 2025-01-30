@@ -15,9 +15,18 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
+# Ollam CFG
 OLLAMA_URL = os.getenv("OLLAMA_URL")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
 PRE_PROMPT = os.getenv("PRE_PROMPT")
+
+# Socket.IO CFG
+SOCKETIO_IP = os.getenv("SOCKETIO_IP")
+SOCKETIO_IP_PORT = os.getenv("SOCKETIO_IP_PORT")
+
+# CURRENT SERVER CFG
+API_URL = os.getenv("API_URL")
+API_URL_PORT = os.getenv("API_URL_PORT")
 
 # Configure SocketIO with CORS and async mode
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
@@ -160,7 +169,7 @@ def static_files(filename):
 # Main entry point
 if __name__ == '__main__': 
     try: 
-        print("\n🔥 Starting server at http://localhost:5000 ...") 
-        socketio.run(app, host='0.0.0.0', port=5000) 
+        print(f"\n🔥 Starting server at  {API_URL}:{API_URL_PORT}...") 
+        socketio.run(app, host=SOCKETIO_IP, port=SOCKETIO_IP_PORT) 
     except Exception as e: 
         print(f"Error starting server: {e}")
