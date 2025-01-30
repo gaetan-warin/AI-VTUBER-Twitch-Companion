@@ -26,8 +26,8 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 
 1. **Clone the repository**:
     ```bash
-    git clone https://github.com/gaetan-warin/AI-VTUBER-Twitch-Companion-.git
-    cd AI-VTUBER-Twitch-Companion-
+    git clone https://github.com/gaetan-warin/AI-VTUBER-Twitch-Companion.git
+    cd AI-VTUBER-Twitch-Companion
     ```
 
 2. **Install dependencies**:
