@@ -45,6 +45,24 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .button-group button {
+            flex: 1;
+            margin: 0 5px;
+        }
     </style>
 </head>
 <body>
@@ -53,8 +71,11 @@
 
     <div class="controls">
         <div class="input-group">
-            <textarea id="makeItSpeak" placeholder="Enter text for the avatar to speak..."></textarea>
-            <button id="speakBtn">Speak</button>
+            <textarea id="makeItSpeak" placeholder="Enter text for the avatar to speak or ask AI..."></textarea>
+            <div class="button-group">
+                <button id="speakBtn">Speak</button>
+                <button id="askAIBtn">Ask AI</button>
+            </div>
         </div>
     </div>
 
@@ -232,6 +253,14 @@
             speakNextPart(); // Start speaking the first part
         }
 
+        function askAI(text) {
+            if (!text) {
+                console.log("No text provided.");
+                return;
+            }
+
+            socket.emit('ask_ai', { text });
+        }
 
         function setupEventListeners() {
             document.getElementById('speakBtn').addEventListener('click', () => {
@@ -239,6 +268,15 @@
                 const text = inputField.value.trim();
                 if (text) {
                     socket.emit('speak', { text });
+                    inputField.value = ''; // Clear the input field
+                }
+            });
+
+            document.getElementById('askAIBtn').addEventListener('click', () => {
+                const inputField = document.getElementById('makeItSpeak');
+                const text = inputField.value.trim();
+                if (text) {
+                    askAI(text);
                     inputField.value = ''; // Clear the input field
                 }
             });
@@ -263,6 +301,11 @@
                 modelPath = data.path;
                 console.log("Received model path:", modelPath);
                 main();
+            });
+
+            socket.on('ai_response', data => {
+                console.log("Received AI response:", data.text);
+                speak(data.text);
             });
             
             socket.on('connect', () => console.log('WebSocket connected:', socket.id));

@@ -50,72 +50,58 @@ def trigger_speak():
         return jsonify({'status': 'success', 'message': 'Text sent to speak'}, 200)
     return jsonify({'status': 'error', 'message': 'No text provided'}, 400)
 
+def process_ai_request(user_input):
+    if not user_input:
+        return {'status': 'error', 'message': 'No message provided'}, 400
+
+    if not OLLAMA_URL or not OLLAMA_MODEL:
+        return {'status': 'error', 'message': 'Missing OLLAMA configuration'}, 500
+
+    formatted_input = f"{PRE_PROMPT} Your prompt is: {user_input}." if PRE_PROMPT else user_input
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={"model": OLLAMA_MODEL, "prompt": formatted_input},
+            timeout=30
+        )
+        if response.status_code == 200:
+            full_response = []
+            for line in response.text.splitlines():
+                try:
+                    response_data = json.loads(line)
+                    if response_data.get('done', False):
+                        full_response.append(response_data.get('response', ''))
+                        break
+                    else:
+                        full_response.append(response_data.get('response', ''))
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing JSON line: {e}")
+                    print(f"Problematic line: {line}")
+                except Exception as e:
+                    print(f"Unexpected error parsing line: {e}")
+            final_response = ''.join(full_response).strip()
+            cleaned_response = clean_response(final_response)
+            return {'status': 'success', 'message': cleaned_response}, 200
+        else:
+            return {'status': 'error', 'message': f'LLM API error: {response.status_code}'}, 500
+    except requests.RequestException as e:
+        return {'status': 'error', 'message': f'Request error: {str(e)}'}, 500
+
 @app.route('/process_message', methods=['POST'])
 def process_message():
     try:
         data = request.get_json()
         if not data:
-            print("No JSON data received")
             return jsonify({'status': 'error', 'message': 'No JSON data received'}), 400
-            
-        user_input = data.get('message', '').strip()
-        print(f"Received message: {user_input}")
-        
-        if not user_input:
-            return jsonify({'status': 'error', 'message': 'No message provided'}), 400
-        
-        if not OLLAMA_URL or not OLLAMA_MODEL:
-            print("Missing OLLAMA configuration")
-            return jsonify({'status': 'error', 'message': 'Missing OLLAMA configuration'}), 500
-        
-        # Prepare prompt with PRE_PROMPT
-        formatted_input = f"{PRE_PROMPT} Your prompt is: {user_input}." if PRE_PROMPT else user_input
-        print(f"Sending to Ollama: {formatted_input}")
-        print({"model": OLLAMA_MODEL, "prompt": formatted_input})
-        # Call Ollama
-        response = requests.post(
-            OLLAMA_URL,
-            json={"model": OLLAMA_MODEL, "prompt": formatted_input},
-            timeout=30  # Add timeout
-        )
-        
-        print(f"Ollama response status: {response.status_code}")
-        if response.status_code != 200:
-            print(f"Ollama error response: {response.text}")
-            return jsonify({'status': 'error', 'message': f'LLM API error: {response.status_code}'}), 500
 
-        # Process response
-        full_response = []
-        for line in response.text.splitlines():
-            try:
-                response_data = json.loads(line)
-                if response_data.get('done', False):
-                    full_response.append(response_data.get('response', ''))
-                    break
-                else:
-                    full_response.append(response_data.get('response', ''))
-            except json.JSONDecodeError as e:
-                print(f"Error parsing JSON line: {e}")
-                print(f"Problematic line: {line}")
-            except Exception as e:
-                print(f"Unexpected error parsing line: {e}")
-        
-        final_response = ''.join(full_response).strip()
-        cleaned_response = clean_response(final_response)
-        print(f"Final response: {cleaned_response}")
-        
-        # Emit the response via Socket.IO
-        socketio.emit('speak_text', {'text': cleaned_response})
-        
-        return jsonify({'status': 'success', 'message': cleaned_response}), 200
-        
-    except requests.RequestException as e:
-        print(f"Request error: {str(e)}")
-        return jsonify({'status': 'error', 'message': f'Request error: {str(e)}'}), 500
+        user_input = data.get('message', '').strip()
+        response, status_code = process_ai_request(user_input)
+        if status_code == 200:
+            socketio.emit('speak_text', {'text': response['message']})
+        return jsonify(response), status_code
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
-    
+
 @app.route('/get_model', methods=['GET'])
 def getModel():
     avatar_model_path = "models/shizuku/shizuku.model.json"
@@ -158,6 +144,13 @@ def handle_speak(data):
 def handle_request_model_path():
     avatar_model_path = "models/shizuku/shizuku.model.json"
     socketio.emit('model_path', {'path': avatar_model_path})
+
+@socketio.on('ask_ai')
+def handle_ask_ai(data):
+    user_input = data.get('text', '').strip()
+    response, status_code = process_ai_request(user_input)
+    if status_code == 200:
+        socketio.emit('ai_response', {'text': response['message']})
 
 # Serve static files
 @app.route('/static/<path:filename>')
