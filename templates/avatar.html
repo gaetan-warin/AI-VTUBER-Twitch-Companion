@@ -164,15 +164,17 @@
                     const waitMatch = currentPart.match(/\{\*(\d+)\*\}/);
 
                     if (waitMatch) {
-                        const waitTime = parseInt(waitMatch[1], 10) * 1000;
+                        const waitTime = parseInt(waitMatch[1], 10);
                         setTimeout(() => {
                             partIndex++;
                             speakNextPart();
                         }, waitTime);
                     } else {
-                        // Remove punctuation from the part to be spoken
-                        const textToSpeak = currentPart.replace(/[.!?]/g, '').trim();
-                        showSpeechBubble(textToSpeak); // Show speech bubble when starting to speak
+                        // Extract punctuation from the part to be spoken
+                        const punctuationMatch = currentPart.match(/[.!?]\s*$/);
+                        const punctuation = punctuationMatch ? punctuationMatch[0] : '';
+                        const textToSpeak = currentPart.replace(/[.!?]\s*$/, '').trim();
+                        showSpeechBubble(textToSpeak + punctuation); // Show speech bubble with punctuation
                         
                         const utterance = new SpeechSynthesisUtterance(textToSpeak);
                         const voice = synth.getVoices().find(v => v.name.includes('Female')) || synth.getVoices()[0];
@@ -208,7 +210,12 @@
                             });
                             hideSpeechBubble(); // Hide speech bubble when speech ends
                             partIndex++;
-                            speakNextPart();
+                            // Add a short pause for punctuation
+                            if (punctuation) {
+                                setTimeout(speakNextPart, 500);
+                            } else {
+                                speakNextPart();
+                            }
                         };
 
                         synth.speak(utterance);
