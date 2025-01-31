@@ -49,22 +49,6 @@ def trigger_speak():
         return jsonify({'status': 'success', 'message': 'Text sent to speak'}, 200)
     return jsonify({'status': 'error', 'message': 'No text provided'}, 400)
 
-def process_ai_request(user_input):
-    if not user_input:
-        return {'status': 'error', 'message': 'No message provided'}, 400
-
-    if not OLLAMA_MODEL:
-        return {'status': 'error', 'message': 'Missing OLLAMA configuration'}, 500
-
-    formatted_input = f"{PRE_PROMPT} Your prompt is: {user_input}." if PRE_PROMPT else user_input
-    try:
-        response = ollama.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": formatted_input}])
-        final_response = response['message']['content'].strip()
-        cleaned_response = clean_response(final_response)
-        return {'status': 'success', 'message': cleaned_response}, 200
-    except Exception as e:
-        return {'status': 'error', 'message': f'Request error: {str(e)}'}, 500
-
 @app.route('/process_message', methods=['POST'])
 def process_message():
     try:
@@ -86,6 +70,23 @@ def getModel():
     if (avatar_model_path ==  "shizuku"):
         avatar_model_path = "models/shizuku/shizuku.model.json"
     return avatar_model_path
+
+
+def process_ai_request(user_input):
+    if not user_input:
+        return {'status': 'error', 'message': 'No message provided'}, 400
+
+    if not OLLAMA_MODEL:
+        return {'status': 'error', 'message': 'Missing OLLAMA configuration'}, 500
+
+    formatted_input = f"{PRE_PROMPT} Your prompt is: {user_input}." if PRE_PROMPT else user_input
+    try:
+        response = ollama.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": formatted_input}])
+        final_response = response['message']['content'].strip()
+        cleaned_response = clean_response(final_response)
+        return {'status': 'success', 'message': cleaned_response}, 200
+    except Exception as e:
+        return {'status': 'error', 'message': f'Request error: {str(e)}'}, 500
 
 def clean_response(response):
     response = re.sub(r'<think>\s*.*?\s*</think>', '', response, flags=re.DOTALL)
@@ -134,8 +135,6 @@ def handle_ask_ai(data):
 @app.route('/static/<path:filename>')
 def static_files(filename):
     return send_from_directory(os.path.join(app.root_path, 'static'), filename)
-
-
 
 # Main entry point
 if __name__ == '__main__': 
