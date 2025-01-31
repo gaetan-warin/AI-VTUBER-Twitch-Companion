@@ -43,9 +43,7 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
     PRE_PROMPT="Respond in less than 150 characters and be as consistent as possible."
     API_URL=http://127.0.0.1
     API_URL_PORT=5000
-    OLLAMA_URL=http://127.0.0.1:11434/api/generate
     OLLAMA_MODEL=deepseek-r1:1.5b
-
 
     # Twitch
     TOKEN=YOUR_TWITCH_TOKEN
@@ -84,7 +82,6 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 - `SOCKETIO_IP_PORT` : Port for socket.io
 - `API_URL`: IP of flash server
 - `API_URL_PORT`: Port of flash server
-- `OLLAMA_URL`: URL of your Ollama server
 - `OLLAMA_MODEL`: The Ollama model to use (default: deepseek-r1:1.5b)
 - `TOKEN`: Your Twitch OAuth token
 - `CLIENT_ID`: Your Twitch application client ID
