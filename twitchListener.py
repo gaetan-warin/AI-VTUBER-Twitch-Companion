@@ -21,6 +21,12 @@ NB_SPAM_MESSAGE = float(os.getenv("NB_SPAM_MESSAGE"))
 API_URL = os.getenv("API_URL", "localhost")
 API_URL_PORT = os.getenv("API_URL_PORT", "5000")
 
+BOT_NAME_FOLLOW_SUB = "botwarga"
+KEY_WORD_FOLLOW = "New FOLLOW(S)"
+KEY_WORD_SUB = "NEW SUB"
+DELIMITER_NAME = "{"
+DELIMITER_NAME_END = "}"
+
 # Initialize SocketIO client with retry mechanism
 socket = Client()
 
@@ -45,7 +51,7 @@ class TwitchBot(commands.Bot):
             token=TOKEN,
             client_id=CLIENT_ID,
             nick=BOT_NAME,
-            prefix="!ai",
+            prefix="",
             initial_channels=CHANNEL_NAME,
         )
         
@@ -61,6 +67,16 @@ class TwitchBot(commands.Bot):
 
     async def event_message(self, message):
         if message.echo:
+            return
+
+        if message.author.name == BOT_NAME_FOLLOW_SUB and KEY_WORD_FOLLOW in message.content:
+            follower_name = message.content.split(DELIMITER_NAME)[1].split(DELIMITER_NAME_END)[0]
+            socket.emit('speak', {'text': f"Wonderful, we have a new follower. Thank you: {follower_name}"})
+            return
+        
+        if message.author.name == BOT_NAME_FOLLOW_SUB and KEY_WORD_SUB in message.content:
+            follower_name = message.content.split(DELIMITER_NAME)[1].split(DELIMITER_NAME_END)[0]
+            socket.emit('speak', {'text': f"Incredible, we have a new subscriber. Thank you so much: {follower_name}"})
             return
 
         current_time = time.time()
