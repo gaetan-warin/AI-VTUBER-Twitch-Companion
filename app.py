@@ -18,6 +18,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 # Ollam CFG
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
 PRE_PROMPT = os.getenv("PRE_PROMPT")
+PERSONA_NAME = os.getenv("PERSONA_NAME")
+PERSONA_ROLE = os.getenv("PERSONA_ROLE")
 
 # Socket.IO CFG
 SOCKETIO_IP = os.getenv("SOCKETIO_IP")
@@ -79,9 +81,20 @@ def process_ai_request(user_input):
     if not OLLAMA_MODEL:
         return {'status': 'error', 'message': 'Missing OLLAMA configuration'}, 500
 
-    formatted_input = f"{PRE_PROMPT} Your prompt is: {user_input}." if PRE_PROMPT else user_input
+    # Create a structured prompt
+    structured_prompt = f"""
+    Persona:
+    Name: {PERSONA_NAME}
+    Role: {PERSONA_ROLE}
+
+    Instructions:
+    {PRE_PROMPT}
+
+    User: {user_input}
+    """
+
     try:
-        response = ollama.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": formatted_input}])
+        response = ollama.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": structured_prompt.strip()}])
         final_response = response['message']['content'].strip()
         cleaned_response = clean_response(final_response)
         return {'status': 'success', 'message': cleaned_response}, 200
