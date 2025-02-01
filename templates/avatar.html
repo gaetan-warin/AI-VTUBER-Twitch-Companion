@@ -51,28 +51,8 @@
                 <textarea id="prePrompt">Please respond concisely and avoid monologues. Ensure your behavior strictly adheres to Twitch's Terms of Service, Community Guidelines, and Developer Agreement. Filter out prohibited content (hate speech, threats, etc.), promote respectful interactions, avoid illegal or harmful activities, prevent spam, respect user privacy, and always identify yourself as a bot. Follow channel-specific rules, provide neutral responses when unsure, and be updated regularly to comply with any changes in Twitch’s policies.</textarea>
             </div>
             <div class="tab-content" id="technical" style="display: none;">
-                <!-- <div class="input-group-inline">
-                    <div>
-                        <label for="socketioIp">Socket.IO IP:</label>
-                        <input type="text" id="socketioIp" value="0.0.0.0">
-                    </div>
-                    <div>
-                        <label for="socketioIpPort">Socket.IO IP Port:</label>
-                        <input type="number" id="socketioIpPort" value="5000">
-                    </div>
-                </div>
-                <div class="input-group-inline">
-                    <div>
-                        <label for="apiUrl">API URL:</label>
-                        <input type="text" id="apiUrl" value="http://127.0.0.1">
-                    </div>
-                    <div>
-                        <label for="apiUrlPort">API URL Port:</label>
-                        <input type="number" id="apiUrlPort" value="5000">
-                    </div>
-                </div> -->
                 <label for="ollamaModel">Ollama Model:</label>
-                <input type="text" id="ollamaModel" value="deepseek-r1:1.5b">
+                <select id="ollamaModel"></select>
                 <label for="channelName">Channel Name:</label>
                 <input type="text" id="channelName" value="ai_chat_bot">
                 <label for="token">Twitch Token:</label>
@@ -403,11 +383,31 @@
             }, 10000);
         }
 
+        function populateOllamaModels() {
+            fetch('/get_ollama_models')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const select = document.getElementById('ollamaModel');
+                        data.models.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model;
+                            option.textContent = model;
+                            select.appendChild(option);
+                        });
+                    } else {
+                        console.error('Failed to load Ollama models:', data.message);
+                    }
+                })
+                .catch(error => console.error('Error fetching Ollama models:', error));
+        }
+
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
             socket.connect();
             socket.emit('request_model_path');
+            populateOllamaModels();
         });
     </script>
 </body>

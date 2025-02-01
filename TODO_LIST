@@ -1,7 +1,6 @@
 Step 1
     UI CFG => Twitch - React on follow / subscribe event (Manage what to say ? / Best to have: Create some specific visual effect ?)
     UI CFG => Background change management
-    UI CFG => LLM Management (wich Ollama LLM use)
 NEXT
     UI CFG => Avatar load management
     Twitch => Who to respond

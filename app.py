@@ -79,6 +79,16 @@ def getModel():
         avatar_model_path = "models/shizuku/shizuku.model.json"
     return avatar_model_path
 
+@app.route('/get_ollama_models', methods=['GET'])
+def get_ollama_models():
+    try:
+        response = ollama.list()
+        models = response.models
+        model_names = [model.model for model in models]
+        return jsonify({'status': 'success', 'models': model_names}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 def process_ai_request(user_input):
     if not user_input:
