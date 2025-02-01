@@ -2,7 +2,7 @@ import os
 import eventlet
 from flask import Flask, render_template, send_from_directory, request, jsonify
 from flask_socketio import SocketIO
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import ollama
 import re
 import bleach
@@ -10,7 +10,13 @@ import bleach
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True, socket=True)
 
+# Load default .env file
 load_dotenv()
+
+# Load .env.ui file if it exists and override the default environment variables
+env_ui_path = find_dotenv('.env.ui')
+if env_ui_path:
+    load_dotenv(env_ui_path, override=True)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
@@ -160,6 +166,18 @@ def handle_trigger_ai_request(data):
             socketio.emit('speak_text', {'text': response['message']})
     except Exception as e:
         print(f"Error processing AI request: {e}")
+
+@socketio.on('save_config')
+def handle_save_config(data):
+    try:
+        with open('.env.ui', 'w') as f:
+            for key, value in data.items():
+                if ' ' in value:
+                    value = f'"{value}"'
+                f.write(f"{key}={value}\n")
+        print("Configuration saved to .env.ui")
+    except Exception as e:
+        print(f"Error saving configuration: {e}")
 
 # Serve static files
 @app.route('/static/<path:filename>')

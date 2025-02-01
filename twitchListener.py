@@ -1,12 +1,18 @@
 import time
 from twitchio.ext import commands
 import asyncio
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import os
 from socketio import Client
 import bleach
 
+# Load default .env file
 load_dotenv()
+
+# Load .env.ui file if it exists and override the default environment variables
+env_ui_path = find_dotenv('.env.ui')
+if env_ui_path:
+    load_dotenv(env_ui_path, override=True)
 
 # Twitch CFG
 TOKEN = os.getenv("TOKEN")

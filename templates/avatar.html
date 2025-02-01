@@ -279,6 +279,13 @@
                 const personaName = document.getElementById('personaName').value.trim();
                 const personaRole = document.getElementById('personaRole').value.trim();
                 socket.emit('update_persona', { name: personaName, role: personaRole });
+
+                // Save configuration to .env-ui file
+                const config = {
+                    PERSONA_NAME: personaName,
+                    PERSONA_ROLE: personaRole
+                };
+                socket.emit('save_config', config);
             });
 
             socket.on('speak_text', data => {
