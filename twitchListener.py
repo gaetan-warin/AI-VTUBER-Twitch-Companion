@@ -24,7 +24,7 @@ API_URL_PORT = os.getenv("API_URL_PORT", "5000")
 socket = Client()
 
 def connect_socket():
-    retries = 5
+    retries = 10
     for attempt in range(retries):
         try:
             socket.connect(f"{API_URL}:{API_URL_PORT}")
