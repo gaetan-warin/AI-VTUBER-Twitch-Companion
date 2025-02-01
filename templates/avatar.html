@@ -13,6 +13,7 @@
 
     <script src="static/gsap.min.js"></script>
     <script src="static/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
@@ -48,7 +49,7 @@
                 <label for="personaRole">Persona Role:</label>
                 <textarea id="personaRole">Virtual assistant providing calm and engaging interactions.</textarea>
                 <label for="prePrompt">Pre Prompt:</label>
-                <textarea id="prePrompt">Please respond concisely and avoid monologues. Ensure your behavior strictly adheres to Twitch's Terms of Service, Community Guidelines, and Developer Agreement. Filter out prohibited content (hate speech, threats, etc.), promote respectful interactions, avoid illegal or harmful activities, prevent spam, respect user privacy, and always identify yourself as a bot. Follow channel-specific rules, provide neutral responses when unsure, and be updated regularly to comply with any changes in Twitch’s policies.</textarea>
+                <textarea id="prePrompt">Please respond concisely and avoid monologues. Ensure your behavior strictly adheres to Twitch's Terms of Service, Community Guidelines, and Developer Agreement. Filter out prohibited content (hate speech, threats, etc.), promote respectful interactions, avoid illegal or harmful activities, prevent spam, respect user privacy, and always identify yourself as a bot. Follow channel-specific rules, provide neutral responses when unsure, and be updated regularly to comply with any changes in Twitch's policies.</textarea>
             </div>
             <div class="tab-content" id="technical" style="display: none;">
                 <label for="ollamaModel">Ollama Model:</label>
@@ -89,6 +90,11 @@
             reconnectionAttempts: 5,
             timeout: 3000
         });
+
+        // Add this audio element to the body
+        const celebrationAudio = new Audio('static/success.mp3');
+        celebrationAudio.volume = 0.3; // Set volume to 30%
+        celebrationAudio.preload = 'auto'; // Preload the audio
 
         // Initialize application
         function main() {
@@ -373,6 +379,11 @@
                 showQuestionDisplay(`${data.username}: ${data.question}`);
             });
 
+            socket.on('fireworks', data => {
+                console.log(data.message);
+                triggerFireworks();
+            });
+
             socket.on('connect', () => console.log('WebSocket connected:', socket.id));
             socket.on('disconnect', () => console.log('WebSocket disconnected'));
 
@@ -420,6 +431,57 @@
                 .catch(error => console.error('Error fetching Ollama models:', error));
         }
 
+        function triggerFireworks() {
+            // Play celebration sound
+            celebrationAudio.currentTime = 0; // Reset audio to start
+            const playPromise = celebrationAudio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Audio playback failed:", error);
+                });
+            }
+
+            // Create multiple bursts of confetti
+            const duration = 5 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            function randomInRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+                
+                // Create confetti from random positions
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+                });
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+                });
+            }, 250);
+
+            // Add some special effects
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#ff0000', '#00ff00', '#0000ff']
+            });
+        }
+
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
@@ -429,5 +491,18 @@
             socket.emit('load_config');
         });
     </script>
+
+    <style>
+        .fireworks-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+    </style>
 </body>
 </html>

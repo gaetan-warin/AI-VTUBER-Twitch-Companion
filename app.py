@@ -87,6 +87,38 @@ def get_ollama_models():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/trigger_event', methods=['POST'])
+def trigger_event():
+    data = request.get_json()
+    event_type = data.get('event_type', '').strip()
+    username = data.get('username', '').strip()
+
+    if event_type and username:
+        emit_celebration_event(event_type, username)
+        return jsonify({'status': 'success', 'message': f'{event_type} event triggered for {username}'}), 200
+    return jsonify({'status': 'error', 'message': 'Invalid event data'}), 400
+
+@socketio.on('trigger_event')
+def handle_trigger_event(data):
+    event_type = data.get('event_type', '').strip()
+    username = data.get('username', '').strip()
+    
+    if event_type and username:
+        emit_celebration_event(event_type, username)
+        socketio.emit('event_response', {'status': 'success', 'message': f'{event_type} event triggered for {username}'})
+    else:
+        socketio.emit('event_response', {'status': 'error', 'message': 'Invalid event data'})
+
+def emit_celebration_event(event_type, username):
+    """Helper function to emit celebration events"""
+    message = ""
+    if event_type == 'follow':
+        message = f"New FOLLOW: {username}"
+    elif event_type == 'sub':
+        message = f"NEW SUB: {username}"
+    
+    if message:
+        socketio.emit('fireworks', {'message': message})
 
 def process_ai_request(user_input):
     if not user_input:
