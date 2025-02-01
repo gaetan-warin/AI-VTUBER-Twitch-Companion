@@ -187,18 +187,28 @@ def handle_save_config(data):
 @socketio.on('update_live_global_env')
 def handle_update_live_global_env(data):
     try:
-        persona_name = data.get('name', '').strip()
-        persona_role = data.get('role', '').strip()
-        pre_prompt = data.get('prePrompt', '').strip()
+        persona_name = data.get('personaName', '').strip()
+        persona_role = data.get('personaRole', '').strip()
+        pre_prompt = data.get('prePrompt', '').strip()  
         ollama_model = data.get('ollamaModel', '').strip()
+        avatar_model = data.get('avatarModel', '').strip()
+        
+        # TODO give information to twichLister.py
+        channel_name = data.get('channelName', '').strip()
+        token = data.get('token', '').strip()
+        clientId = data.get('clientId', '').strip()
+        botName = data.get('botName', '').strip()
+        extraDelayListener = data.get('extraDelayListener', '').strip()
+        nbSpamMessage = data.get('nbSpamMessage', '').strip()
 
         # Update the environment variables
-        global PERSONA_NAME, PERSONA_ROLE, PRE_PROMPT, OLLAMA_MODEL
+        global PERSONA_NAME, PERSONA_ROLE, PRE_PROMPT, OLLAMA_MODEL, AVATAR_MODEL
         PERSONA_NAME = persona_name
         PERSONA_ROLE = persona_role
         PRE_PROMPT = pre_prompt
         PRE_PROMPT = pre_prompt
         OLLAMA_MODEL = ollama_model
+        AVATAR_MODEL = avatar_model
 
         socketio.emit('update_live_global_env_response', {'status': 'success', 'message': 'Persona updated successfully'})
     except Exception as e:

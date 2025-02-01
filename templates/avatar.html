@@ -323,10 +323,17 @@
                 const ollamaModel = document.getElementById('ollamaModel').value.trim();
                 const avatarModel = document.getElementById('avatarModel').value.trim();
                 socket.emit('update_live_global_env', { 
-                    name: personaName,
-                    role: personaRole,
-                    prePrompt: prePrompt,
-                    ollamaModel: ollamaModel
+                    avatarModel,
+                    personaName,
+                    personaRole,
+                    prePrompt,
+                    ollamaModel,
+                    channelName,
+                    token,
+                    clientId, 
+                    botName,
+                    extraDelayListener,
+                    nbSpamMessage
                 });
 
                 // Save configuration to .env file

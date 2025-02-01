@@ -207,6 +207,32 @@ button:active {
     box-sizing: border-box;
 }
 
+.sidebar-content select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box;
+    font-size: 14px;
+    background: white;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.sidebar-content select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.sidebar-content input:focus,
+.sidebar-content textarea:focus,
+.sidebar-content select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
 .sidebar-content button {
     width: 100%;
     padding: 10px;
