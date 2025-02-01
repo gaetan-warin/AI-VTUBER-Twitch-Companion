@@ -11,7 +11,10 @@ import bleach
 eventlet.monkey_patch(thread=True, os=True, select=True, socket=True)
 
 # Load default .env file
-load_dotenv(encoding='latin1')
+dotenv_path = find_dotenv()
+if not dotenv_path:
+    dotenv_path = find_dotenv('.env.example')
+load_dotenv(dotenv_path, encoding='latin1')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
