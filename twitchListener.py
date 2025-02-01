@@ -20,10 +20,6 @@ NB_SPAM_MESSAGE = float(os.getenv("NB_SPAM_MESSAGE"))
 API_URL = os.getenv("API_URL", "localhost")
 API_URL_PORT = os.getenv("API_URL_PORT", "5000")
 
-# Debug prints to check the values
-print(f"API_URL: {API_URL}")
-print(f"API_URL_PORT: {API_URL_PORT}")
-
 # Initialize SocketIO client with retry mechanism
 socket = Client()
 
