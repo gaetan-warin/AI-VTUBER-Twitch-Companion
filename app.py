@@ -5,6 +5,7 @@ from flask_socketio import SocketIO
 from dotenv import load_dotenv
 import ollama
 import re
+import bleach
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True, socket=True)
@@ -80,6 +81,9 @@ def process_ai_request(user_input):
     if not OLLAMA_MODEL:
         return {'status': 'error', 'message': 'Missing OLLAMA configuration'}, 500
 
+    # Sanitize the user input
+    sanitized_input = bleach.clean(user_input)
+
     # Create a structured prompt
     structured_prompt = f"""
     Persona:
@@ -89,7 +93,7 @@ def process_ai_request(user_input):
     Instructions:
     {PRE_PROMPT}
 
-    User: {user_input}
+    User: {sanitized_input}
     """
 
     try:

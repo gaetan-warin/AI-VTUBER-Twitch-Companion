@@ -4,6 +4,7 @@ import asyncio
 from dotenv import load_dotenv
 import os
 from socketio import Client
+import bleach
 
 load_dotenv()
 
@@ -88,11 +89,14 @@ class TwitchBot(commands.Bot):
             self.processing_time = current_time
 
             try:
+                # Sanitize the user input
+                sanitized_input = bleach.clean(user_input)
+
                 # Emit the AI request to the WebSocket server
-                socket.emit('trigger_ai_request', {'message': user_input})
+                socket.emit('trigger_ai_request', {'message': sanitized_input})
                 
                 # Emit username and question to WebSocket server
-                socket.emit('display_question', {'username': message.author.name, 'question': user_input})
+                socket.emit('display_question', {'username': message.author.name, 'question': sanitized_input})
                     
             except Exception as e:
                 print(f"Error sending message to server: {e}")
