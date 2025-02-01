@@ -51,13 +51,13 @@ def trigger_speak():
         return jsonify({'status': 'success', 'message': 'Text sent to speak'}, 200)
     return jsonify({'status': 'error', 'message': 'No text provided'}, 400)
 
-@app.route('/process_message', methods=['POST'])
-def process_message():
+@app.route('/trigger_ai_request', methods=['POST'])
+def trigger_ai_request():
+    print("in trigger_ai_request")
     try:
         data = request.get_json()
         if not data:
             return jsonify({'status': 'error', 'message': 'No JSON data received'}), 400
-
         user_input = data.get('message', '').strip()
         response, status_code = process_ai_request(user_input)
         if status_code == 200:

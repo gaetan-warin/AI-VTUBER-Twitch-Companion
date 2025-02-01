@@ -71,7 +71,10 @@ class TwitchBot(commands.Bot):
                     json={"message": user_input}
                 )
                 
-                if response.status_code != 200:
+                if response.status_code == 404:
+                    print("Error: Endpoint not found (404). Please check the server URL and port.")
+                    await message.channel.send("Error: The requested service is not available.")
+                elif response.status_code != 200:
                     print(f"Error from server: {response.status_code}")
                     print(f"Error response: {response.text}")
                     
