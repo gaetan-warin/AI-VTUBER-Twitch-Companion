@@ -11,7 +11,7 @@ import bleach
 eventlet.monkey_patch(thread=True, os=True, select=True, socket=True)
 
 # Load default .env file
-load_dotenv()
+load_dotenv(encoding='latin1')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
@@ -175,40 +175,56 @@ def handle_trigger_ai_request(data):
 @socketio.on('save_config')
 def handle_save_config(data):
     try:
-        # Load existing .env values
-        env_path = find_dotenv('.env')
-        existing_config = {}
-        if env_path:
-            with open(env_path, 'r', encoding='latin1') as f:
-                for line in f:
-                    key, value = line.strip().split('=', 1)
-                    existing_config[key] = value.strip('"')
-
-        # Update only changed values
         with open('.env', 'w', encoding='latin1') as f:
             for key, value in data.items():
-                if key not in existing_config or existing_config[key] != value:
-                    if ' ' in value:
-                        value = f'"{value}"'
-                    f.write(f"{key}={value}\n")
+                if ' ' in value:
+                    value = f'"{value}"'
+                f.write(f"{key}={value}\n")
         print("Configuration saved to .env")
     except Exception as e:
         print(f"Error saving configuration: {e}")
 
-@socketio.on('update_persona')
-def handle_update_persona(data):
+@socketio.on('update_live_global_env')
+def handle_update_live_global_env(data):
     try:
         persona_name = data.get('name', '').strip()
         persona_role = data.get('role', '').strip()
+        pre_prompt = data.get('prePrompt', '').strip()
+        ollama_model = data.get('ollamaModel', '').strip()
 
         # Update the environment variables
-        global PERSONA_NAME, PERSONA_ROLE
+        global PERSONA_NAME, PERSONA_ROLE, PRE_PROMPT, OLLAMA_MODEL
         PERSONA_NAME = persona_name
         PERSONA_ROLE = persona_role
+        PRE_PROMPT = pre_prompt
+        PRE_PROMPT = pre_prompt
+        OLLAMA_MODEL = ollama_model
 
-        socketio.emit('update_persona_response', {'status': 'success', 'message': 'Persona updated successfully'})
+        socketio.emit('update_live_global_env_response', {'status': 'success', 'message': 'Persona updated successfully'})
     except Exception as e:
-        socketio.emit('update_persona_response', {'status': 'error', 'message': str(e)})
+        socketio.emit('update_live_global_env_response', {'status': 'error', 'message': str(e)})
+
+@socketio.on('load_config')
+def handle_load_config():
+    try:
+        # Reload the .env file to get the most recent values
+        load_dotenv(override=True, encoding='latin1')
+        config = {
+            'PERSONA_NAME': os.getenv('PERSONA_NAME', ''),
+            'PERSONA_ROLE': os.getenv('PERSONA_ROLE', ''),
+            'PRE_PROMPT': os.getenv('PRE_PROMPT', ''),
+            'AVATAR_MODEL': os.getenv('AVATAR_MODEL', ''),
+            'CHANNEL_NAME': os.getenv('CHANNEL_NAME', ''),
+            'TOKEN': os.getenv('TOKEN', ''),
+            'CLIENT_ID': os.getenv('CLIENT_ID', ''),
+            'BOT_NAME': os.getenv('BOT_NAME', ''),
+            'EXTRA_DELAY_LISTENER': os.getenv('EXTRA_DELAY_LISTENER', ''),
+            'NB_SPAM_MESSAGE': os.getenv('NB_SPAM_MESSAGE', ''),
+            'OLLAMA_MODEL': os.getenv('OLLAMA_MODEL', '')
+        }
+        socketio.emit('load_config', config)
+    except Exception as e:
+        socketio.emit('load_config_error', {'status': 'error', 'message': str(e)})
 
 # Serve static files
 @app.route('/static/<path:filename>')

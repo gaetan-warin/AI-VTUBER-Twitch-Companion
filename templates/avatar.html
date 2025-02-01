@@ -320,15 +320,16 @@
                 const extraDelayListener = document.getElementById('extraDelayListener').value.trim();
                 const nbSpamMessage = document.getElementById('nbSpamMessage').value.trim();
                 const prePrompt = document.getElementById('prePrompt').value.trim();
-                // const socketioIp = document.getElementById('socketioIp').value.trim();
-                // const socketioIpPort = document.getElementById('socketioIpPort').value.trim();
-                // const apiUrl = document.getElementById('apiUrl').value.trim();
-                // const apiUrlPort = document.getElementById('apiUrlPort').value.trim();
                 const ollamaModel = document.getElementById('ollamaModel').value.trim();
                 const avatarModel = document.getElementById('avatarModel').value.trim();
-                socket.emit('update_persona', { name: personaName, role: personaRole });
+                socket.emit('update_live_global_env', { 
+                    name: personaName,
+                    role: personaRole,
+                    prePrompt: prePrompt,
+                    ollamaModel: ollamaModel
+                });
 
-                // Save configuration to .env-ui file
+                // Save configuration to .env file
                 const config = {
                     PERSONA_NAME: personaName,
                     PERSONA_ROLE: personaRole,
@@ -340,10 +341,6 @@
                     BOT_NAME: botName,
                     EXTRA_DELAY_LISTENER: extraDelayListener,
                     NB_SPAM_MESSAGE: nbSpamMessage,
-                    // SOCKETIO_IP: socketioIp,
-                    // SOCKETIO_IP_PORT: socketioIpPort,
-                    // API_URL: apiUrl,
-                    // API_URL_PORT: apiUrlPort,
                     OLLAMA_MODEL: ollamaModel
                 };
                 socket.emit('save_config', config);
@@ -371,6 +368,20 @@
 
             socket.on('connect', () => console.log('WebSocket connected:', socket.id));
             socket.on('disconnect', () => console.log('WebSocket disconnected'));
+
+            socket.on('load_config', data => {
+                document.getElementById('personaName').value = data.PERSONA_NAME || '';
+                document.getElementById('personaRole').value = data.PERSONA_ROLE || '';
+                document.getElementById('prePrompt').value = data.PRE_PROMPT || '';
+                document.getElementById('avatarModel').value = data.AVATAR_MODEL || '';
+                document.getElementById('channelName').value = data.CHANNEL_NAME || '';
+                document.getElementById('token').value = data.TOKEN || '';
+                document.getElementById('clientId').value = data.CLIENT_ID || '';
+                document.getElementById('botName').value = data.BOT_NAME || '';
+                document.getElementById('extraDelayListener').value = data.EXTRA_DELAY_LISTENER || '';
+                document.getElementById('nbSpamMessage').value = data.NB_SPAM_MESSAGE || '';
+                document.getElementById('ollamaModel').value = data.OLLAMA_MODEL || '';
+            });
         }
 
         function showQuestionDisplay(text) {
@@ -408,6 +419,7 @@
             socket.connect();
             socket.emit('request_model_path');
             populateOllamaModels();
+            socket.emit('load_config');
         });
     </script>
 </body>
