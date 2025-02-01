@@ -1,9 +1,9 @@
-import requests
 import time
 from twitchio.ext import commands
 import asyncio
 from dotenv import load_dotenv
 import os
+from socketio import Client
 
 load_dotenv()
 
@@ -16,8 +16,30 @@ EXTRA_DELAY_LISTENER = float(os.getenv("EXTRA_DELAY_LISTENER"))
 NB_SPAM_MESSAGE = float(os.getenv("NB_SPAM_MESSAGE"))
 
 # Avatar server URL
-API_URL = os.getenv("API_URL")
-API_URL_PORT = os.getenv("API_URL_PORT")
+API_URL = os.getenv("API_URL", "localhost")
+API_URL_PORT = os.getenv("API_URL_PORT", "5000")
+
+# Debug prints to check the values
+print(f"API_URL: {API_URL}")
+print(f"API_URL_PORT: {API_URL_PORT}")
+
+# Initialize SocketIO client with retry mechanism
+socket = Client()
+
+def connect_socket():
+    retries = 5
+    for attempt in range(retries):
+        try:
+            socket.connect(f"{API_URL}:{API_URL_PORT}")
+            print("Connected to WebSocket server")
+            break
+        except Exception as e:
+            print(f"Connection attempt {attempt + 1} failed: {e}")
+            time.sleep(2)
+    else:
+        print("Failed to connect to WebSocket server after several attempts")
+
+connect_socket()
 
 class TwitchBot(commands.Bot):
     def __init__(self):
@@ -66,17 +88,11 @@ class TwitchBot(commands.Bot):
             self.processing_time = current_time
 
             try:
-                response = requests.post(
-                    f"{API_URL}:{API_URL_PORT}/trigger_ai_request",
-                    json={"message": user_input}
-                )
+                # Emit the AI request to the WebSocket server
+                socket.emit('trigger_ai_request', {'message': user_input})
                 
-                if response.status_code == 404:
-                    print("Error: Endpoint not found (404). Please check the server URL and port.")
-                    await message.channel.send("Error: The requested service is not available.")
-                elif response.status_code != 200:
-                    print(f"Error from server: {response.status_code}")
-                    print(f"Error response: {response.text}")
+                # Emit username and question to WebSocket server
+                socket.emit('display_question', {'username': message.author.name, 'question': user_input})
                     
             except Exception as e:
                 print(f"Error sending message to server: {e}")
@@ -90,3 +106,4 @@ class TwitchBot(commands.Bot):
 if __name__ == "__main__":
     bot = TwitchBot()
     bot.run()
+    socket.disconnect()

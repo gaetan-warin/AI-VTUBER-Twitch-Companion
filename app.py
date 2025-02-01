@@ -5,7 +5,6 @@ from flask_socketio import SocketIO
 from dotenv import load_dotenv
 import ollama
 import re
-import json
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True, socket=True)
@@ -144,15 +143,29 @@ def handle_ask_ai(data):
     if status_code == 200:
         socketio.emit('ai_response', {'text': response['message']})
 
+@socketio.on('display_question')
+def handle_display_question(data):
+    socketio.emit('display_question', data)
+
+@socketio.on('trigger_ai_request')
+def handle_trigger_ai_request(data):
+    try:
+        user_input = data.get('message', '').strip()
+        response, status_code = process_ai_request(user_input)
+        if status_code == 200:
+            socketio.emit('speak_text', {'text': response['message']})
+    except Exception as e:
+        print(f"Error processing AI request: {e}")
+
 # Serve static files
 @app.route('/static/<path:filename>')
 def static_files(filename):
     return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 
 # Main entry point
-if __name__ == '__main__': 
-    try: 
-        print(f"\n🔥 Starting server at  {API_URL}:{API_URL_PORT}...") 
-        socketio.run(app, host=SOCKETIO_IP, port=SOCKETIO_IP_PORT) 
-    except Exception as e: 
+if __name__ == '__main__':
+    try:
+        print(f"\n🔥 Starting server at {API_URL}:{API_URL_PORT}...")
+        socketio.run(app, host=SOCKETIO_IP, port=SOCKETIO_IP_PORT)
+    except Exception as e:
         print(f"Error starting server: {e}")
