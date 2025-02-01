@@ -11,6 +11,7 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 - **WebSocket Communication**: Real-time interaction between the frontend and backend
 - **Avatar Animation**: The mouth of the avatar animates in sync with the speech using sine wave patterns
 - **Spam Protection**: Built-in protection against message spam and duplicate messages
+- **Input Sanitization**: User input is sanitized to prevent injection attacks
 
 ## Requirements
 
@@ -21,6 +22,7 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 - **Live2D Model Files**: A 3D model used for the avatar animations
 - **Twitch API Token**: To connect to Twitch chat and listen for user messages
 - **Ollama**: Local LLM server for generating responses
+- **bleach**: Library for sanitizing user input
 
 ## Setup
 
