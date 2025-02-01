@@ -35,6 +35,10 @@ textarea {
     font-size: 16px;
 }
 
+#prePrompt {
+    height: 310px;
+}
+
 button {
     padding: 12px 24px;
     background: var(--primary-color);
@@ -93,6 +97,16 @@ button:active {
     align-items: center;
 }
 
+.input-group-inline {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.input-group-inline > div {
+    flex: 1;
+}
+
 .button-group {
     display: flex;
     justify-content: space-between;
@@ -124,14 +138,15 @@ button:active {
     position: fixed;
     top: 0;
     right: 0;
-    width: 300px;
+    width: 320px;
     height: 100%;
-    background: #f5f5f5;
+    background: #ffffff;
     box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
     padding: 20px;
     box-sizing: border-box;
     transition: transform 0.3s ease;
     z-index: 1000;
+    border-radius: 10px 0 0 10px;
 }
 
 .sidebar.collapsed {
@@ -142,6 +157,22 @@ button:active {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 20px;
+}
+
+.sidebar-header h2 {
+    font-size: 24px;
+    color: var(--primary-color);
+}
+
+.sidebar-header button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 14px;
 }
 
 .sidebar-content {
@@ -152,16 +183,18 @@ button:active {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
+    color: black;
 }
 
 .sidebar-content input,
 .sidebar-content textarea {
     width: 100%;
     padding: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     border: 1px solid #ddd;
     border-radius: 5px;
     box-sizing: border-box;
+    font-size: 14px;
 }
 
 .sidebar-content input[type="number"],
@@ -190,6 +223,14 @@ button:active {
     background: #45a049;
 }
 
+.sidebar-content .section-header {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
 .toggle-sidebar-btn-collapsed {
     display: none;
     position: fixed;
@@ -209,4 +250,35 @@ button:active {
     width: 20px;
     height: 20px;
     filter: invert(100%);
+}
+
+.sidebar-tabs {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 10px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.3s ease;
+    border-radius: 5px;
+    margin: 0 5px;
+}
+
+.tab-button.active {
+    background: #45a049;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
 }

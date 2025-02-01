@@ -170,11 +170,22 @@ def handle_trigger_ai_request(data):
 @socketio.on('save_config')
 def handle_save_config(data):
     try:
+        # Load existing .env.ui values
+        env_ui_path = find_dotenv('.env.ui')
+        existing_config = {}
+        if env_ui_path:
+            with open(env_ui_path, 'r') as f:
+                for line in f:
+                    key, value = line.strip().split('=', 1)
+                    existing_config[key] = value.strip('"')
+
+        # Update only changed values
         with open('.env.ui', 'w') as f:
             for key, value in data.items():
-                if ' ' in value:
-                    value = f'"{value}"'
-                f.write(f"{key}={value}\n")
+                if key not in existing_config or existing_config[key] != value:
+                    if ' ' in value:
+                        value = f'"{value}"'
+                    f.write(f"{key}={value}\n")
         print("Configuration saved to .env.ui")
     except Exception as e:
         print(f"Error saving configuration: {e}")

@@ -35,17 +35,44 @@
             <h2>Configuration</h2>
             <button id="toggleSidebarBtn">Collapse</button>
         </div>
+        <div class="sidebar-tabs">
+            <button class="tab-button active" data-tab="general">General</button>
+            <button class="tab-button" data-tab="technical">Technical</button>
+        </div>
         <div class="sidebar-content">
-            <label for="personaName">Persona Name:</label>
-            <input type="text" id="personaName" value="Sarah">
-            <label for="personaRole">Persona Role:</label>
-            <textarea id="personaRole">Virtual assistant providing calm and engaging interactions.</textarea>
-            <label for="channelName">Channel Name:</label>
-            <input type="text" id="channelName" value="ai_chat_bot">
-            <label for="extraDelayListener">Extra Delay Listener:</label>
-            <input type="number" id="extraDelayListener" value="3">
-            <label for="nbSpamMessage">Number of Spam Messages:</label>
-            <input type="number" id="nbSpamMessage" value="3">
+            <div class="tab-content" id="general" style="display: block;">
+                <label for="avatarModel">Avatar Model:</label>
+                <input type="text" id="avatarModel" value="shizuku"><label for="personaName">Persona Name:</label>
+                <input type="text" id="personaName" value="Sarah">
+                <label for="personaRole">Persona Role:</label>
+                <textarea id="personaRole">Virtual assistant providing calm and engaging interactions.</textarea>
+                <label for="prePrompt">Pre Prompt:</label>
+                <textarea id="prePrompt">Please respond concisely and avoid monologues. Ensure your behavior strictly adheres to Twitch's Terms of Service, Community Guidelines, and Developer Agreement. Filter out prohibited content (hate speech, threats, etc.), promote respectful interactions, avoid illegal or harmful activities, prevent spam, respect user privacy, and always identify yourself as a bot. Follow channel-specific rules, provide neutral responses when unsure, and be updated regularly to comply with any changes in Twitch’s policies.</textarea>
+            </div>
+            <div class="tab-content" id="technical" style="display: none;">
+                <label for="socketioIp">Socket.IO IP:</label>
+                <input type="text" id="socketioIp" value="0.0.0.0">
+                <label for="socketioIpPort">Socket.IO IP Port:</label>
+                <input type="number" id="socketioIpPort" value="5000">
+                <label for="apiUrl">API URL:</label>
+                <input type="text" id="apiUrl" value="http://127.0.0.1">
+                <label for="apiUrlPort">API URL Port:</label>
+                <input type="number" id="apiUrlPort" value="5000">
+                <label for="ollamaModel">Ollama Model:</label>
+                <input type="text" id="ollamaModel" value="deepseek-r1:1.5b">
+                <label for="avatarModel">Avatar Model:</label>
+                <input type="text" id="avatarModel" value="shizuku">
+                <label for="token">Twitch Token:</label>
+                <input type="text" id="token" value="YOUR_TWITCH_TOKEN">
+                <label for="clientId">Twitch Client ID:</label>
+                <input type="text" id="clientId" value="YOUR_TWITCH_CLIENT_ID">
+                <label for="botName">Bot Name:</label>
+                <input type="text" id="botName" value="ai_chat_bot">
+                <label for="extraDelayListener">Extra Delay Listener:</label>
+                <input type="number" id="extraDelayListener" value="3">
+                <label for="nbSpamMessage">Number of Spam Messages:</label>
+                <input type="number" id="nbSpamMessage" value="3">
+            </div>
             <button id="saveConfigBtn">Save</button>
         </div>
     </div>
@@ -281,21 +308,50 @@
                 document.getElementById('toggleSidebarBtnCollapsed').style.display = 'none';
             });
 
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+                    button.classList.add('active');
+                    document.getElementById(button.dataset.tab).style.display = 'block';
+                });
+            });
+
             document.getElementById('saveConfigBtn').addEventListener('click', () => {
                 const personaName = document.getElementById('personaName').value.trim();
                 const personaRole = document.getElementById('personaRole').value.trim();
                 const channelName = document.getElementById('channelName').value.trim();
+                const token = document.getElementById('token').value.trim();
+                const clientId = document.getElementById('clientId').value.trim();
+                const botName = document.getElementById('botName').value.trim();
                 const extraDelayListener = document.getElementById('extraDelayListener').value.trim();
                 const nbSpamMessage = document.getElementById('nbSpamMessage').value.trim();
+                const prePrompt = document.getElementById('prePrompt').value.trim();
+                const socketioIp = document.getElementById('socketioIp').value.trim();
+                const socketioIpPort = document.getElementById('socketioIpPort').value.trim();
+                const apiUrl = document.getElementById('apiUrl').value.trim();
+                const apiUrlPort = document.getElementById('apiUrlPort').value.trim();
+                const ollamaModel = document.getElementById('ollamaModel').value.trim();
+                const avatarModel = document.getElementById('avatarModel').value.trim();
                 socket.emit('update_persona', { name: personaName, role: personaRole });
 
                 // Save configuration to .env-ui file
                 const config = {
                     PERSONA_NAME: personaName,
                     PERSONA_ROLE: personaRole,
+                    PRE_PROMPT: prePrompt,
+                    AVATAR_MODEL: avatarModel,
                     CHANNEL_NAME: channelName,
+                    TOKEN: token,
+                    CLIENT_ID: clientId,
+                    BOT_NAME: botName,
                     EXTRA_DELAY_LISTENER: extraDelayListener,
-                    NB_SPAM_MESSAGE: nbSpamMessage
+                    NB_SPAM_MESSAGE: nbSpamMessage,
+                    SOCKETIO_IP: socketioIp,
+                    SOCKETIO_IP_PORT: socketioIpPort,
+                    API_URL: apiUrl,
+                    API_URL_PORT: apiUrlPort,
+                    OLLAMA_MODEL: ollamaModel
                 };
                 socket.emit('save_config', config);
             });
