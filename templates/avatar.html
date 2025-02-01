@@ -30,6 +30,24 @@
         </div>
     </div>
 
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h2>Configuration</h2>
+            <button id="toggleSidebarBtn">Collapse</button>
+        </div>
+        <div class="sidebar-content">
+            <label for="personaName">Persona Name:</label>
+            <input type="text" id="personaName" value="Sarah">
+            <label for="personaRole">Persona Role:</label>
+            <textarea id="personaRole">Virtual assistant providing calm and engaging interactions.</textarea>
+            <button id="saveConfigBtn">Save</button>
+        </div>
+    </div>
+
+    <button id="toggleSidebarBtnCollapsed" class="toggle-sidebar-btn-collapsed">
+        <img src="static/expand-icon.webp" alt="Expand">
+    </button>
+
     <script>
         let modelPath = '';
 
@@ -241,6 +259,26 @@
                         inputField.value = ''; // Clear the input field
                     }
                 }
+            });
+
+            document.getElementById('toggleSidebarBtn').addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('collapsed');
+                document.getElementById('toggleSidebarBtn').textContent = sidebar.classList.contains('collapsed') ? 'Expand' : 'Collapse';
+                document.getElementById('toggleSidebarBtnCollapsed').style.display = sidebar.classList.contains('collapsed') ? 'block' : 'none';
+            });
+
+            document.getElementById('toggleSidebarBtnCollapsed').addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.remove('collapsed');
+                document.getElementById('toggleSidebarBtn').textContent = 'Collapse';
+                document.getElementById('toggleSidebarBtnCollapsed').style.display = 'none';
+            });
+
+            document.getElementById('saveConfigBtn').addEventListener('click', () => {
+                const personaName = document.getElementById('personaName').value.trim();
+                const personaRole = document.getElementById('personaRole').value.trim();
+                socket.emit('update_persona', { name: personaName, role: personaRole });
             });
 
             socket.on('speak_text', data => {
