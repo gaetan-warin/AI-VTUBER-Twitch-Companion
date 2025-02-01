@@ -117,6 +117,7 @@ button:active {
     font-size: 14px;
     color: #333;
     z-index: 1000;
+    display: none;
 }
 
 .sidebar {

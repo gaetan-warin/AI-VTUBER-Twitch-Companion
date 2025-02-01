@@ -18,7 +18,7 @@
 <body>
     <canvas id="canvas"></canvas>
     <div id="speech-bubble" class="speech-bubble"></div>
-    <div id="question-display" class="question-display"></div>
+    <div id="question-display" class="question-display" style="display: none;"></div>
 
     <div class="controls">
         <div class="input-group">
@@ -305,12 +305,21 @@
             });
             
             socket.on('display_question', data => {
-                const questionDisplay = document.getElementById('question-display');
-                questionDisplay.textContent = `${data.username}: ${data.question}`;
+                showQuestionDisplay(`${data.username}: ${data.question}`);
             });
 
             socket.on('connect', () => console.log('WebSocket connected:', socket.id));
             socket.on('disconnect', () => console.log('WebSocket disconnected'));
+        }
+
+        function showQuestionDisplay(text) {
+            const questionDisplay = document.getElementById('question-display');
+            questionDisplay.textContent = text;
+            questionDisplay.style.display = 'block';
+            clearTimeout(questionDisplay.hideTimeout);
+            questionDisplay.hideTimeout = setTimeout(() => {
+                questionDisplay.style.display = 'none';
+            }, 10000);
         }
 
         // Initial setup
