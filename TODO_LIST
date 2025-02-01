@@ -1,9 +1,8 @@
 Step 1
-    UI CFG => Twitch - React on follow / subscribe event (Manage what to say ? / Best to have: Create some specific visual effect ?)
     UI CFG => Background change management
     Speach to text to make Bot answer you directly, 
     UI CFG => Activate/desactive Microphone
-    UI CFG => what name of bot to listen ? What encupsalation character for first/last character ? Wich sound to play ? List from mp3 of static folder
+    UI CFG => what name of bot to listen ? What encupsalation character for first/last character ? Wich sound to play ? List from mp3 of static folder ? what to say ?
 NEXT
     UI CFG => Config react only on some word like a "Hey, Sarah !"
     UI CFG => Avatar load management
