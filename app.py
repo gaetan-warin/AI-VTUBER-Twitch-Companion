@@ -13,11 +13,6 @@ eventlet.monkey_patch(thread=True, os=True, select=True, socket=True)
 # Load default .env file
 load_dotenv()
 
-# Load .env.ui file if it exists and override the default environment variables
-env_ui_path = find_dotenv('.env.ui')
-if env_ui_path:
-    load_dotenv(env_ui_path, override=True)
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
@@ -180,25 +175,40 @@ def handle_trigger_ai_request(data):
 @socketio.on('save_config')
 def handle_save_config(data):
     try:
-        # Load existing .env.ui values
-        env_ui_path = find_dotenv('.env.ui')
+        # Load existing .env values
+        env_path = find_dotenv('.env')
         existing_config = {}
-        if env_ui_path:
-            with open(env_ui_path, 'r') as f:
+        if env_path:
+            with open(env_path, 'r', encoding='latin1') as f:
                 for line in f:
                     key, value = line.strip().split('=', 1)
                     existing_config[key] = value.strip('"')
 
         # Update only changed values
-        with open('.env.ui', 'w') as f:
+        with open('.env', 'w', encoding='latin1') as f:
             for key, value in data.items():
                 if key not in existing_config or existing_config[key] != value:
                     if ' ' in value:
                         value = f'"{value}"'
                     f.write(f"{key}={value}\n")
-        print("Configuration saved to .env.ui")
+        print("Configuration saved to .env")
     except Exception as e:
         print(f"Error saving configuration: {e}")
+
+@socketio.on('update_persona')
+def handle_update_persona(data):
+    try:
+        persona_name = data.get('name', '').strip()
+        persona_role = data.get('role', '').strip()
+
+        # Update the environment variables
+        global PERSONA_NAME, PERSONA_ROLE
+        PERSONA_NAME = persona_name
+        PERSONA_ROLE = persona_role
+
+        socketio.emit('update_persona_response', {'status': 'success', 'message': 'Persona updated successfully'})
+    except Exception as e:
+        socketio.emit('update_persona_response', {'status': 'error', 'message': str(e)})
 
 # Serve static files
 @app.route('/static/<path:filename>')
