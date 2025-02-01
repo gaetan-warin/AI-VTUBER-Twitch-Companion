@@ -320,10 +320,10 @@
                 const extraDelayListener = document.getElementById('extraDelayListener').value.trim();
                 const nbSpamMessage = document.getElementById('nbSpamMessage').value.trim();
                 const prePrompt = document.getElementById('prePrompt').value.trim();
-                const socketioIp = document.getElementById('socketioIp').value.trim();
-                const socketioIpPort = document.getElementById('socketioIpPort').value.trim();
-                const apiUrl = document.getElementById('apiUrl').value.trim();
-                const apiUrlPort = document.getElementById('apiUrlPort').value.trim();
+                // const socketioIp = document.getElementById('socketioIp').value.trim();
+                // const socketioIpPort = document.getElementById('socketioIpPort').value.trim();
+                // const apiUrl = document.getElementById('apiUrl').value.trim();
+                // const apiUrlPort = document.getElementById('apiUrlPort').value.trim();
                 const ollamaModel = document.getElementById('ollamaModel').value.trim();
                 const avatarModel = document.getElementById('avatarModel').value.trim();
                 socket.emit('update_persona', { name: personaName, role: personaRole });
@@ -340,10 +340,10 @@
                     BOT_NAME: botName,
                     EXTRA_DELAY_LISTENER: extraDelayListener,
                     NB_SPAM_MESSAGE: nbSpamMessage,
-                    SOCKETIO_IP: socketioIp,
-                    SOCKETIO_IP_PORT: socketioIpPort,
-                    API_URL: apiUrl,
-                    API_URL_PORT: apiUrlPort,
+                    // SOCKETIO_IP: socketioIp,
+                    // SOCKETIO_IP_PORT: socketioIpPort,
+                    // API_URL: apiUrl,
+                    // API_URL_PORT: apiUrlPort,
                     OLLAMA_MODEL: ollamaModel
                 };
                 socket.emit('save_config', config);
