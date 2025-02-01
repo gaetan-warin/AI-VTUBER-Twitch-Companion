@@ -40,6 +40,12 @@
             <input type="text" id="personaName" value="Sarah">
             <label for="personaRole">Persona Role:</label>
             <textarea id="personaRole">Virtual assistant providing calm and engaging interactions.</textarea>
+            <label for="channelName">Channel Name:</label>
+            <input type="text" id="channelName" value="ai_chat_bot">
+            <label for="extraDelayListener">Extra Delay Listener:</label>
+            <input type="number" id="extraDelayListener" value="3">
+            <label for="nbSpamMessage">Number of Spam Messages:</label>
+            <input type="number" id="nbSpamMessage" value="3">
             <button id="saveConfigBtn">Save</button>
         </div>
     </div>
@@ -278,12 +284,18 @@
             document.getElementById('saveConfigBtn').addEventListener('click', () => {
                 const personaName = document.getElementById('personaName').value.trim();
                 const personaRole = document.getElementById('personaRole').value.trim();
+                const channelName = document.getElementById('channelName').value.trim();
+                const extraDelayListener = document.getElementById('extraDelayListener').value.trim();
+                const nbSpamMessage = document.getElementById('nbSpamMessage').value.trim();
                 socket.emit('update_persona', { name: personaName, role: personaRole });
 
                 // Save configuration to .env-ui file
                 const config = {
                     PERSONA_NAME: personaName,
-                    PERSONA_ROLE: personaRole
+                    PERSONA_ROLE: personaRole,
+                    CHANNEL_NAME: channelName,
+                    EXTRA_DELAY_LISTENER: extraDelayListener,
+                    NB_SPAM_MESSAGE: nbSpamMessage
                 };
                 socket.emit('save_config', config);
             });

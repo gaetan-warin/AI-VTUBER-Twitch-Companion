@@ -1,7 +1,5 @@
 Twitch => Who to respond
 Twitch => Regarding the person who send the message he should be able to manage to keep conversation or switch subject.
-UI CFG => Persona Management
-UI CFG => Twitch - Spam Management Rules
 UI CFG => Twitch - React on follow / subscribe event (Manage what to say ? / Best to have: Create some specific visual effect ?)
 UI CFG => Avatar load management
 UI CFG => Background change management

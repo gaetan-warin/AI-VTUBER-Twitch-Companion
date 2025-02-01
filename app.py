@@ -21,7 +21,7 @@ if env_ui_path:
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
-# Ollam CFG
+# Ollama CFG
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
 PRE_PROMPT = os.getenv("PRE_PROMPT")
 PERSONA_NAME = os.getenv("PERSONA_NAME")
@@ -35,7 +35,7 @@ SOCKETIO_IP_PORT = os.getenv("SOCKETIO_IP_PORT")
 API_URL = os.getenv("API_URL")
 API_URL_PORT = os.getenv("API_URL_PORT")
 
-DEFAULT_AVATAR_MODEL = os.getenv("API_URL_PORT")
+AVATAR_MODEL = os.getenv("API_URL_PORT")
 
 # Configure SocketIO with CORS and async mode
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')

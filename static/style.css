@@ -164,6 +164,16 @@ button:active {
     box-sizing: border-box;
 }
 
+.sidebar-content input[type="number"],
+.sidebar-content input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
 .sidebar-content button {
     width: 100%;
     padding: 10px;
