@@ -57,11 +57,9 @@ async function loadModel(app, modelPath) {
         model.height = size;
 
         // Save the original update function
-        const originalUpdate = model.internalModel.motionManager.update.bind(model.internalModel.motionManager);
 
         model.internalModel.motionManager.update = () => {
             if (modelPath.includes("model.json")) {
-                originalUpdate();
                 model.internalModel.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
             } else {
                var parameterIndex = currentModel.internalModel.coreModel.getParameterIndex("ParamMouthOpenY");
