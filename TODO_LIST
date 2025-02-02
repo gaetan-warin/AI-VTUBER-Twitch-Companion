@@ -1,4 +1,5 @@
 Step 1
+    Merge twitch_lister directly inside the project instead of separate process, a folder listener should be create, and we should have ability to choose whitch lister should be launche, see if the listener is on, possibily to live connect/disconnect. Then we have a patern to create more listener for other services if required. In technical listener config, with green or red dot for live. When clicking on it, we have CFG of this specific listener
     Speach to text to make Bot answer you directly,
     UI CFG => Activate/desactive Microphone
     UI CFG => Which micro to used
