@@ -433,6 +433,41 @@ def handle_update_live_global_env(data):
         socketio.emit('update_live_global_env_response',
                      {'status': 'error', 'message': f'Variable access error: {str(e)}'})
 
+@socketio.on('load_config')
+def handle_load_config():
+    """Load and emit current configuration values from environment variables.
+
+    Reloads the .env file and sends all configuration values to the client.
+    """
+    try:
+        # Reload the .env file to get the most recent values
+        load_dotenv(override=True, encoding='latin1')
+        env_config = {
+            'PERSONA_NAME': os.getenv('PERSONA_NAME', ''),
+            'PERSONA_ROLE': os.getenv('PERSONA_ROLE', ''),
+            'PRE_PROMPT': os.getenv('PRE_PROMPT', ''),
+            'AVATAR_MODEL': os.getenv('AVATAR_MODEL', ''),
+            'CHANNEL_NAME': os.getenv('CHANNEL_NAME', ''),
+            'TOKEN': os.getenv('TOKEN', ''),
+            'CLIENT_ID': os.getenv('CLIENT_ID', ''),
+            'EXTRA_DELAY_LISTENER': os.getenv('EXTRA_DELAY_LISTENER', ''),
+            'NB_SPAM_MESSAGE': os.getenv('NB_SPAM_MESSAGE', ''),
+            'OLLAMA_MODEL': os.getenv('OLLAMA_MODEL', ''),
+            'BOT_NAME_FOLLOW_SUB': os.getenv('BOT_NAME_FOLLOW_SUB', ''),
+            'KEY_WORD_FOLLOW': os.getenv('KEY_WORD_FOLLOW', ''),
+            'KEY_WORD_SUB': os.getenv('KEY_WORD_SUB', ''),
+            'DELIMITER_NAME': os.getenv('DELIMITER_NAME', ''),
+            'DELIMITER_NAME_END': os.getenv('DELIMITER_NAME_END', ''),
+            'BACKGROUND_IMAGE': os.getenv('BACKGROUND_IMAGE', '')
+        }
+        socketio.emit('load_config', env_config)
+    except (IOError, OSError) as e:
+        socketio.emit('load_config_error',
+                     {'status': 'error', 'message': f'File operation error: {str(e)}'})
+    except (KeyError, ValueError) as e:
+        socketio.emit('load_config_error',
+                     {'status': 'error', 'message': f'Configuration error: {str(e)}'})
+
 @socketio.on('update_twitch_listener')
 def handle_update_twitch_listener(data):
     """Update Twitch listener configuration values in real-time.

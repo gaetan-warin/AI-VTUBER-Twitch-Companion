@@ -248,6 +248,7 @@ function setupEventListeners() {
         const prePrompt = document.getElementById('prePrompt').value.trim();
         const ollamaModel = document.getElementById('ollamaModel').value.trim();
         const avatarModel = document.getElementById('avatarModel').value.trim();
+        const backgroundImage = document.getElementById('backgroundImage').value.trim();
         const botNameFollowSub = document.getElementById('botNameFollowSub').value.trim();
         const keyWordFollow = document.getElementById('keyWordFollow').value.trim();
         const keyWordSub = document.getElementById('keyWordSub').value.trim();
@@ -261,6 +262,7 @@ function setupEventListeners() {
             PERSONA_ROLE: personaRole,
             PRE_PROMPT: prePrompt,
             AVATAR_MODEL: avatarModel,
+            BACKGROUND_IMAGE: backgroundImage,
             CHANNEL_NAME: channelName,
             TOKEN: token,
             CLIENT_ID: clientId,
@@ -277,19 +279,58 @@ function setupEventListeners() {
         socket.emit('save_config', config);
     });
 
-    socket.on('save_config_response', function(response) {
-        console.log("Save config response:", response);  // Debugging line
-        if (response.status === 'success') {
-            showNotification('success', 'Configuration saved successfully');
-            if (response.config.BACKGROUND_IMAGE) {
-                document.body.classList.add('dynamic-background');
-                document.body.style.backgroundImage = `url('/static/images/background/${response.config.BACKGROUND_IMAGE}')`;
-                document.body.style.backgroundPosition = 'center';
-                document.body.style.backgroundSize = 'cover';
+    const avatarModelSelect = document.getElementById('avatarModel');
+    const backgroundImageSelect = document.getElementById('backgroundImage');
+
+    // Populate avatar models
+    fetch('/get_avatar_models')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    avatarModelSelect.appendChild(option);
+                });
+            } else {
+                console.error('Failed to load avatar models:', data.message);
             }
-        } else {
-            showNotification('error', response.message);
-        }
+        })
+        .catch(error => console.error('Error fetching avatar models:', error));
+
+    // Populate background images
+    fetch('/get_background_images')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                data.images.forEach(image => {
+                    const option = document.createElement('option');
+                    option.value = image;
+                    option.textContent = image;
+                    backgroundImageSelect.appendChild(option);
+                });
+
+                // Set the background image select value after options are populated
+                const backgroundImage = data.BACKGROUND_IMAGE || '';
+                if (backgroundImage) {
+                    backgroundImageSelect.value = backgroundImage;
+                    document.body.style.backgroundImage = `url('/static/images/background/${backgroundImage}')`;
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundSize = 'cover';
+                }
+            } else {
+                console.error('Failed to load background images:', data.message);
+            }
+        })
+        .catch(error => console.error('Error fetching background images:', error));
+
+    // Update background image on change
+    backgroundImageSelect.addEventListener('change', function() {
+        const selectedImage = backgroundImageSelect.value;
+        document.body.style.backgroundImage = `url('/static/images/background/${selectedImage}')`;
+        document.body.style.backgroundPosition = 'center';
+        document.body.style.backgroundSize = 'cover';
     });
 }
 
@@ -437,44 +478,26 @@ socket.on('load_config', data => {
     document.getElementById('backgroundImage').value = data.BACKGROUND_IMAGE || '';
 
     if (data.BACKGROUND_IMAGE) {
-        document.body.classList.add('dynamic-background');
         document.body.style.backgroundImage = `url('/static/images/background/${data.BACKGROUND_IMAGE}')`;
         document.body.style.backgroundPosition = 'center';
         document.body.style.backgroundSize = 'cover';
     }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-    const avatarModelSelect = document.getElementById('avatarModel');
-    const backgroundImageSelect = document.getElementById('backgroundImage');
+socket.on('save_config_response', function(response) {
+    if (response.status === 'success') {
+        showNotification('success', 'Configuration saved successfully');
+    } else {
+        showNotification('error', response.message);
+    }
+});
 
-    fetch('/get_avatar_models')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                data.models.forEach(model => {
-                    const option = document.createElement('option');
-                    option.value = model;
-                    option.textContent = model;
-                    avatarModelSelect.appendChild(option);
-                });
-            }
-        });
-
-    fetch('/get_background_images')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                data.images.forEach(image => {
-                    const option = document.createElement('option');
-                    option.value = image;
-                    option.textContent = image;
-                    backgroundImageSelect.appendChild(option);
-                });
-            }
-        });
-
-    // Load existing config using Socket.IO
+// Initial setup
+document.addEventListener('DOMContentLoaded', () => {
+    setupEventListeners();
+    socket.connect();
+    socket.emit('request_model_path');
+    populateOllamaModels();
     socket.emit('load_config');
 
     socket.on('load_config', config => {
