@@ -62,6 +62,49 @@ function main() {
     }
 }
 
+function loadAvatarModel(modelPath) {
+    if (!modelPath) {
+        console.error('Model path not set.');
+        return;
+    }
+
+    const app = new PIXI.Application({
+        view: document.getElementById('canvas'),
+        autoStart: true,
+        resizeTo: window,
+        transparent: true,
+        antialias: true
+    });
+
+    app.ticker.add(() => {
+        // mimic the interpolation value, 0-1
+        if (isSpeaking)
+            mouthState.value = Math.sin(performance.now() / 200) / 2 + 0.5;
+    });
+
+    try {
+        PIXI.live2d.Live2DModel.fromModelSettingsFile(modelPath).then(model => {
+            app.stage.addChild(model);
+            currentModel = model;
+
+            model.anchor.set(0.5, 0.5);
+            model.position.set(innerWidth / 2, innerHeight / 2);
+
+            const size = Math.min(innerWidth, innerHeight) * 0.8;
+            model.width = size;
+            model.height = size;
+
+            const updateFn = model.internal.motionManager.update;
+            model.internal.motionManager.update = () => {
+                updateFn.call(model.internal.motionManager);
+                model.internal.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
+            }
+        });
+    } catch (error) {
+        console.error('Model loading error:', error);
+    }
+}
+
 // Voice initialization
 synth.onvoiceschanged = () => {
     voicesReady = true;
@@ -330,6 +373,13 @@ function setupEventListeners() {
         document.body.style.backgroundImage = `url('/static/images/background/${selectedImage}')`;
         document.body.style.backgroundPosition = 'center';
         document.body.style.backgroundSize = 'cover';
+    });
+
+    // Load new avatar model on change
+    avatarModelSelect.addEventListener('change', function() {
+        const selectedModel = avatarModelSelect.value;
+        const modelPath = `models/${selectedModel}/${selectedModel}.model.json`;
+        loadAvatarModel(modelPath);
     });
 }
 
