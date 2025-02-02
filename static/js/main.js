@@ -40,7 +40,7 @@ function main() {
     });
 
     try {
-        PIXI.live2d.Live2DModel.fromModelSettingsFile(modelPath).then(model => {
+        PIXI.live2d.Live2DModel.from(modelPath).then(model => {
             app.stage.addChild(model);
             currentModel = model;
 
@@ -85,7 +85,7 @@ function loadAvatarModel(modelPath) {
     });
 
     try {
-        PIXI.live2d.Live2DModel.fromModelSettingsFile(modelPath).then(model => {
+        PIXI.live2d.Live2DModel.from(modelPath).then(model => {
             console.log('Model loaded successfully:', model); // Add logging
             app.stage.addChild(model);
             currentModel = model;
@@ -384,7 +384,9 @@ function setupEventListeners() {
         const selectedModel = avatarModelSelect.value;
         let modelPath;
         if (selectedModel === 'mao_pro') {
-            modelPath = `models/${selectedModel}/mao_pro.cdi3.json`;
+            modelPath = `models/${selectedModel}/mao_pro.model3.json`;
+        } else if (selectedModel === 'haru') {
+            modelPath = `models/${selectedModel}/haru_greeter_t03.model3.json`;
         } else {
             modelPath = `models/${selectedModel}/${selectedModel}.model.json`;
         }
