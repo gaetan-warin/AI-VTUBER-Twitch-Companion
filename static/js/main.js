@@ -253,6 +253,7 @@ function setupEventListeners() {
         const keyWordSub = document.getElementById('keyWordSub').value.trim();
         const delimiterName = document.getElementById('delimiterName').value.trim();
         const delimiterNameEnd = document.getElementById('delimiterNameEnd').value.trim();
+        const backgroundImage = document.getElementById('backgroundImage').value.trim();
 
         // Save configuration to .env file
         const config = {
@@ -270,9 +271,25 @@ function setupEventListeners() {
             KEY_WORD_FOLLOW: keyWordFollow,
             KEY_WORD_SUB: keyWordSub,
             DELIMITER_NAME: delimiterName,
-            DELIMITER_NAME_END: delimiterNameEnd
+            DELIMITER_NAME_END: delimiterNameEnd,
+            BACKGROUND_IMAGE: backgroundImage
         };
         socket.emit('save_config', config);
+    });
+
+    socket.on('save_config_response', function(response) {
+        console.log("Save config response:", response);  // Debugging line
+        if (response.status === 'success') {
+            showNotification('success', 'Configuration saved successfully');
+            if (response.config.BACKGROUND_IMAGE) {
+                document.body.classList.add('dynamic-background');
+                document.body.style.backgroundImage = `url('/static/images/background/${response.config.BACKGROUND_IMAGE}')`;
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundSize = 'cover';
+            }
+        } else {
+            showNotification('error', response.message);
+        }
     });
 }
 
@@ -417,21 +434,64 @@ socket.on('load_config', data => {
     document.getElementById('keyWordSub').value = data.KEY_WORD_SUB || '';
     document.getElementById('delimiterName').value = data.DELIMITER_NAME || '';
     document.getElementById('delimiterNameEnd').value = data.DELIMITER_NAME_END || '';
-});
+    document.getElementById('backgroundImage').value = data.BACKGROUND_IMAGE || '';
 
-socket.on('save_config_response', function(response) {
-    if (response.status === 'success') {
-        showNotification('success', 'Configuration saved successfully');
-    } else {
-        showNotification('error', response.message);
+    if (data.BACKGROUND_IMAGE) {
+        document.body.classList.add('dynamic-background');
+        document.body.style.backgroundImage = `url('/static/images/background/${data.BACKGROUND_IMAGE}')`;
+        document.body.style.backgroundPosition = 'center';
+        document.body.style.backgroundSize = 'cover';
     }
 });
 
-// Initial setup
-document.addEventListener('DOMContentLoaded', () => {
-    setupEventListeners();
-    socket.connect();
-    socket.emit('request_model_path');
-    populateOllamaModels();
+document.addEventListener('DOMContentLoaded', function() {
+    const avatarModelSelect = document.getElementById('avatarModel');
+    const backgroundImageSelect = document.getElementById('backgroundImage');
+
+    fetch('/get_avatar_models')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    avatarModelSelect.appendChild(option);
+                });
+            }
+        });
+
+    fetch('/get_background_images')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                data.images.forEach(image => {
+                    const option = document.createElement('option');
+                    option.value = image;
+                    option.textContent = image;
+                    backgroundImageSelect.appendChild(option);
+                });
+            }
+        });
+
+    // Load existing config using Socket.IO
     socket.emit('load_config');
+
+    socket.on('load_config', config => {
+        console.log("Loaded config:", config);  // Debugging line
+        document.getElementById('avatarModel').value = config.AVATAR_MODEL || '';
+        document.getElementById('personaName').value = config.PERSONA_NAME || '';
+        document.getElementById('personaRole').value = config.PERSONA_ROLE || '';
+        document.getElementById('prePrompt').value = config.PRE_PROMPT || '';
+        document.getElementById('backgroundImage').value = config.BACKGROUND_IMAGE || '';
+
+        if (config.BACKGROUND_IMAGE) {
+            document.body.classList.add('dynamic-background');
+            document.body.style.backgroundImage = `url('/static/images/background/${config.BACKGROUND_IMAGE}')`;
+        }
+    });
+
+    socket.on('load_config_error', error => {
+        console.error('Error loading config:', error.message);
+    });
 });

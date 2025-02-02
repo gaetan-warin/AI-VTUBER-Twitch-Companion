@@ -54,12 +54,15 @@ class Config:
         self.pre_prompt = os.getenv("PRE_PROMPT")
         self.ollama_model = os.getenv("OLLAMA_MODEL")
         self.avatar_model = os.getenv("AVATAR_MODEL")
+        self.background_image = os.getenv("BACKGROUND_IMAGE")
 
     def update(self, **kwargs):
         """Update configuration values."""
         for key, value in kwargs.items():
             if hasattr(self, key.lower()):
                 setattr(self, key.lower(), value)
+        if 'background_image' in kwargs:
+            self.background_image = kwargs['background_image']
 
 config = Config()
 
@@ -135,6 +138,26 @@ def trigger_event():
         }
         return jsonify(response), 200
     return jsonify({'status': 'error', 'message': 'Invalid event data'}), 400
+
+@app.route('/get_background_images', methods=['GET'])
+def get_background_images():
+    """Retrieve list of available background images."""
+    images_dir = os.path.join(app.root_path, 'static', 'images', 'background')
+    try:
+        images = [f for f in os.listdir(images_dir) if os.path.isfile(os.path.join(images_dir, f))]
+        return jsonify({'status': 'success', 'images': images}), 200
+    except (OSError, IOError) as e:
+        return jsonify({'status': 'error', 'message': f'Error accessing images: {str(e)}'}), 500
+
+@app.route('/get_avatar_models', methods=['GET'])
+def get_avatar_models():
+    """Retrieve list of available avatar models."""
+    models_dir = os.path.join(app.root_path, 'models')
+    try:
+        models = [f for f in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, f))]
+        return jsonify({'status': 'success', 'models': models}), 200
+    except (OSError, IOError) as e:
+        return jsonify({'status': 'error', 'message': f'Error accessing models: {str(e)}'}), 500
 
 @socketio.on('trigger_event')
 def handle_trigger_event(data):
@@ -230,6 +253,44 @@ def clean_response(response):
     response = re.sub(r'\\_\\_\\_', '', response)
     response = re.sub(r'\s+', ' ', response).strip()
     return response
+
+@socketio.on('load_config')
+def handle_load_config():
+    """Load and emit current configuration values from environment variables.
+
+    Reloads the .env file and sends all configuration values to the client.
+    """
+    try:
+        # Reload the .env file to get the most recent values
+        load_dotenv(override=True, encoding='latin1')
+        env_config = {
+            'PERSONA_NAME': os.getenv('PERSONA_NAME', ''),
+            'PERSONA_ROLE': os.getenv('PERSONA_ROLE', ''),
+            'PRE_PROMPT': os.getenv('PRE_PROMPT', ''),
+            'AVATAR_MODEL': os.getenv('AVATAR_MODEL', ''),
+            'CHANNEL_NAME': os.getenv('CHANNEL_NAME', ''),
+            'TOKEN': os.getenv('TOKEN', ''),
+            'CLIENT_ID': os.getenv('CLIENT_ID', ''),
+            'EXTRA_DELAY_LISTENER': os.getenv('EXTRA_DELAY_LISTENER', ''),
+            'NB_SPAM_MESSAGE': os.getenv('NB_SPAM_MESSAGE', ''),
+            'OLLAMA_MODEL': os.getenv('OLLAMA_MODEL', ''),
+            'BOT_NAME_FOLLOW_SUB': os.getenv('BOT_NAME_FOLLOW_SUB', ''),
+            'KEY_WORD_FOLLOW': os.getenv('KEY_WORD_FOLLOW', ''),
+            'KEY_WORD_SUB': os.getenv('KEY_WORD_SUB', ''),
+            'DELIMITER_NAME': os.getenv('DELIMITER_NAME', ''),
+            'DELIMITER_NAME_END': os.getenv('DELIMITER_NAME_END', ''),
+            'BACKGROUND_IMAGE': os.getenv('BACKGROUND_IMAGE', '')
+        }
+        print("Loaded config:", env_config)  # Debugging line
+        socketio.emit('load_config', env_config)
+    except (IOError, OSError) as e:
+        error_msg = f'File operation error: {str(e)}'
+        print(error_msg)  # Debugging line
+        socketio.emit('load_config_error', {'status': 'error', 'message': error_msg})
+    except (KeyError, ValueError) as e:
+        error_msg = f'Configuration error: {str(e)}'
+        print(error_msg)  # Debugging line
+        socketio.emit('load_config_error', {'status': 'error', 'message': error_msg})
 
 # Serve model files and resources (textures, expressions, motions, sounds)
 @app.route('/models/<path:filename>')
@@ -335,7 +396,9 @@ def handle_save_config(data):
             'DELIMITER_NAME_END': data.get('DELIMITER_NAME_END', '')
         }
         socketio.emit('update_twitch_config', twitch_config)
-        socketio.emit('save_config_response', {'status': 'success'})
+
+        # Emit the updated configuration back to the client
+        socketio.emit('save_config_response', {'status': 'success', 'config': existing_env})
 
     except (IOError, OSError) as e:
         error_msg = f"File operation error: {str(e)}"
@@ -358,7 +421,8 @@ def handle_update_live_global_env(data):
             persona_role = data.get('personaRole', '').strip(),
             pre_prompt = data.get('prePrompt', '').strip(),
             ollama_model = data.get('ollamaModel', '').strip(),
-            avatar_model = data.get('avatarModel', '').strip()
+            avatar_model = data.get('avatarModel', '').strip(),
+            background_image = data.get('backgroundImage', '').strip()
         )
         socketio.emit('update_live_global_env_response',
                      {'status': 'success', 'message': 'Persona updated successfully'})
@@ -368,40 +432,6 @@ def handle_update_live_global_env(data):
     except AttributeError as e:
         socketio.emit('update_live_global_env_response',
                      {'status': 'error', 'message': f'Variable access error: {str(e)}'})
-
-@socketio.on('load_config')
-def handle_load_config():
-    """Load and emit current configuration values from environment variables.
-
-    Reloads the .env file and sends all configuration values to the client.
-    """
-    try:
-        # Reload the .env file to get the most recent values
-        load_dotenv(override=True, encoding='latin1')
-        env_config = {
-            'PERSONA_NAME': os.getenv('PERSONA_NAME', ''),
-            'PERSONA_ROLE': os.getenv('PERSONA_ROLE', ''),
-            'PRE_PROMPT': os.getenv('PRE_PROMPT', ''),
-            'AVATAR_MODEL': os.getenv('AVATAR_MODEL', ''),
-            'CHANNEL_NAME': os.getenv('CHANNEL_NAME', ''),
-            'TOKEN': os.getenv('TOKEN', ''),
-            'CLIENT_ID': os.getenv('CLIENT_ID', ''),
-            'EXTRA_DELAY_LISTENER': os.getenv('EXTRA_DELAY_LISTENER', ''),
-            'NB_SPAM_MESSAGE': os.getenv('NB_SPAM_MESSAGE', ''),
-            'OLLAMA_MODEL': os.getenv('OLLAMA_MODEL', ''),
-            'BOT_NAME_FOLLOW_SUB': os.getenv('BOT_NAME_FOLLOW_SUB', ''),
-            'KEY_WORD_FOLLOW': os.getenv('KEY_WORD_FOLLOW', ''),
-            'KEY_WORD_SUB': os.getenv('KEY_WORD_SUB', ''),
-            'DELIMITER_NAME': os.getenv('DELIMITER_NAME', ''),
-            'DELIMITER_NAME_END': os.getenv('DELIMITER_NAME_END', '')
-        }
-        socketio.emit('load_config', env_config)
-    except (IOError, OSError) as e:
-        socketio.emit('load_config_error',
-                     {'status': 'error', 'message': f'File operation error: {str(e)}'})
-    except (KeyError, ValueError) as e:
-        socketio.emit('load_config_error',
-                     {'status': 'error', 'message': f'Configuration error: {str(e)}'})
 
 @socketio.on('update_twitch_listener')
 def handle_update_twitch_listener(data):
