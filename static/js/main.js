@@ -513,30 +513,41 @@ socket.on('save_config_response', function(response) {
     }
 });
 
+function applyConfig(config) {
+    document.getElementById('avatarModel').value = config.AVATAR_MODEL || '';
+    document.getElementById('personaName').value = config.PERSONA_NAME || '';
+    document.getElementById('personaRole').value = config.PERSONA_ROLE || '';
+    document.getElementById('prePrompt').value = config.PRE_PROMPT || '';
+    document.getElementById('backgroundImage').value = config.BACKGROUND_IMAGE || '';
+
+    if (config.BACKGROUND_IMAGE) {
+        document.body.style.backgroundImage = `url('/static/images/background/${config.BACKGROUND_IMAGE}')`;
+        document.body.style.backgroundPosition = 'center';
+        document.body.style.backgroundSize = 'cover';
+    }
+
+    if (config.AVATAR_MODEL) {
+        if (config.AVATAR_MODEL === 'mao_pro') {
+            modelPath = `models/${config.AVATAR_MODEL}/mao_pro.model3.json`;
+        } else if (config.AVATAR_MODEL === 'haru') {
+            modelPath = `models/${config.AVATAR_MODEL}/haru_greeter_t03.model3.json`;
+        } else {
+            modelPath = `models/${config.AVATAR_MODEL}/${config.AVATAR_MODEL}.model.json`;
+        }
+        loadAvatarModel(modelPath);
+    }
+}
+
+socket.on('load_config', config => {
+    console.log("Loaded config:", config);  // Debugging line
+    applyConfig(config);
+});
+
 // Initial setup
 document.addEventListener('DOMContentLoaded', () => {
-    
     setupEventListeners();
     socket.connect();
     socket.emit('request_model_path');
     populateOllamaModels();
     socket.emit('load_config');
-
-    socket.on('load_config', config => {
-        console.log("Loaded config:", config);  // Debugging line
-        document.getElementById('avatarModel').value = config.AVATAR_MODEL || '';
-        document.getElementById('personaName').value = config.PERSONA_NAME || '';
-        document.getElementById('personaRole').value = config.PERSONA_ROLE || '';
-        document.getElementById('prePrompt').value = config.PRE_PROMPT || '';
-        document.getElementById('backgroundImage').value = config.BACKGROUND_IMAGE || '';
-
-        if (config.BACKGROUND_IMAGE) {
-            document.body.classList.add('dynamic-background');
-            document.body.style.backgroundImage = `url('/static/images/background/${config.BACKGROUND_IMAGE}')`;
-        }
-    });
-
-    socket.on('load_config_error', error => {
-        console.error('Error loading config:', error.message);
-    });
 });
