@@ -56,11 +56,18 @@ async function loadModel(app, modelPath) {
         model.width = size;
         model.height = size;
 
-        model.internalModel.motionManager.update = () => {
-            // updateFn.call(model.internalModel.motionManager);
-            model.internalModel.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
-        }
+        // Save the original update function
+        const originalUpdate = model.internalModel.motionManager.update.bind(model.internalModel.motionManager);
 
+        model.internalModel.motionManager.update = () => {
+            if (modelPath.includes("model.json")) {
+                originalUpdate();
+                model.internalModel.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
+            } else {
+               var parameterIndex = currentModel.internalModel.coreModel.getParameterIndex("ParamMouthOpenY");
+                currentModel.internalModel.coreModel.setParameterValueByIndex(parameterIndex , mouthState.value);
+            }
+        }
     } catch (error) {
         console.error('Model loading error:', error);
     }
