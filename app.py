@@ -386,7 +386,6 @@ def handle_load_config():
             'CHANNEL_NAME': os.getenv('CHANNEL_NAME', ''),
             'TOKEN': os.getenv('TOKEN', ''),
             'CLIENT_ID': os.getenv('CLIENT_ID', ''),
-            'BOT_NAME': os.getenv('BOT_NAME', ''),
             'EXTRA_DELAY_LISTENER': os.getenv('EXTRA_DELAY_LISTENER', ''),
             'NB_SPAM_MESSAGE': os.getenv('NB_SPAM_MESSAGE', ''),
             'OLLAMA_MODEL': os.getenv('OLLAMA_MODEL', '')

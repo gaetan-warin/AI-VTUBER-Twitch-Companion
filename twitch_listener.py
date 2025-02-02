@@ -19,7 +19,6 @@ load_dotenv(encoding='latin1')
 # Twitch CFG
 TOKEN = os.getenv("TOKEN")
 CLIENT_ID = os.getenv("CLIENT_ID")
-BOT_NAME = os.getenv("BOT_NAME")
 CHANNEL_NAME = [os.getenv("CHANNEL_NAME")]
 EXTRA_DELAY_LISTENER = float(os.getenv("EXTRA_DELAY_LISTENER"))
 NB_SPAM_MESSAGE = float(os.getenv("NB_SPAM_MESSAGE"))
@@ -68,7 +67,6 @@ class TwitchBot(commands.Bot):
         super().__init__(
             token=TOKEN,
             client_id=CLIENT_ID,
-            nick=BOT_NAME,
             prefix="",
             initial_channels=CHANNEL_NAME,
         )

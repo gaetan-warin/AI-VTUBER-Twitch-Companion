@@ -351,7 +351,6 @@
                 const channelName = document.getElementById('channelName').value.trim();
                 const token = document.getElementById('token').value.trim();
                 const clientId = document.getElementById('clientId').value.trim();
-                const botName = document.getElementById('botName').value.trim();
                 const extraDelayListener = document.getElementById('extraDelayListener').value.trim();
                 const nbSpamMessage = document.getElementById('nbSpamMessage').value.trim();
                 const prePrompt = document.getElementById('prePrompt').value.trim();
@@ -372,7 +371,6 @@
                     CHANNEL_NAME: channelName,
                     TOKEN: token,
                     CLIENT_ID: clientId,
-                    BOT_NAME: botName,
                     EXTRA_DELAY_LISTENER: extraDelayListener,
                     NB_SPAM_MESSAGE: nbSpamMessage,
                     OLLAMA_MODEL: ollamaModel,
@@ -421,7 +419,6 @@
                 document.getElementById('channelName').value = data.CHANNEL_NAME || '';
                 document.getElementById('token').value = data.TOKEN || '';
                 document.getElementById('clientId').value = data.CLIENT_ID || '';
-                document.getElementById('botName').value = data.BOT_NAME || '';
                 document.getElementById('extraDelayListener').value = data.EXTRA_DELAY_LISTENER || '';
                 document.getElementById('nbSpamMessage').value = data.NB_SPAM_MESSAGE || '';
                 document.getElementById('ollamaModel').value = data.OLLAMA_MODEL || '';
