@@ -254,7 +254,6 @@ function setupEventListeners() {
         const keyWordSub = document.getElementById('keyWordSub').value.trim();
         const delimiterName = document.getElementById('delimiterName').value.trim();
         const delimiterNameEnd = document.getElementById('delimiterNameEnd').value.trim();
-        const backgroundImage = document.getElementById('backgroundImage').value.trim();
 
         // Save configuration to .env file
         const config = {
