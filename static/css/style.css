@@ -468,3 +468,13 @@ button:active {
 .notification.error {
     background-color: #f44336;
 }
+
+/* Add blur effect to Twitch Token and Client ID fields */
+.blurry {
+    filter: blur(5px);
+    transition: filter 0.3s ease;
+}
+
+.blurry:focus {
+    filter: none;
+}

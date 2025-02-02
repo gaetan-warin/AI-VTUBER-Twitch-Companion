@@ -66,16 +66,6 @@
                     </div>
 
                     <div class="settings-section">
-                        <h3>Twitch Connection</h3>
-                        <label for="channelName">Channel Name:</label>
-                        <input type="text" id="channelName" value="ai_chat_bot">
-                        <label for="token">Twitch Token:</label>
-                        <input type="text" id="token" value="YOUR_TWITCH_TOKEN">
-                        <label for="clientId">Twitch Client ID:</label>
-                        <input type="text" id="clientId" value="YOUR_TWITCH_CLIENT_ID">
-                    </div>
-
-                    <div class="settings-section">
                         <h3>Bot Behavior</h3>
                         <label for="extraDelayListener">Extra Delay Listener:</label>
                         <input type="number" id="extraDelayListener" value="3" step="0.5">
@@ -95,6 +85,16 @@
                         <input type="text" id="delimiterName" value="{">
                         <label for="delimiterNameEnd">Name Delimiter End:</label>
                         <input type="text" id="delimiterNameEnd" value="}">
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Twitch Connection</h3>
+                        <label for="channelName">Channel Name:</label>
+                        <input type="text" id="channelName" value="ai_chat_bot">
+                        <label for="token">Twitch Token:</label>
+                        <input type="text" id="token" class="blurry" value="YOUR_TWITCH_TOKEN">
+                        <label for="clientId">Twitch Client ID:</label>
+                        <input type="text" id="clientId" class="blurry" value="YOUR_TWITCH_CLIENT_ID">
                     </div>
                 </div>
             </div>

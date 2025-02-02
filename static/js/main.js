@@ -367,6 +367,28 @@ function setupEventListeners() {
         }
         loadAvatarModel(modelPath);
     });
+
+    const tokenField = document.getElementById('token');
+    tokenField.classList.add('blurry');
+
+    tokenField.addEventListener('focus', () => {
+        tokenField.classList.remove('blurry');
+    });
+
+    tokenField.addEventListener('blur', () => {
+        tokenField.classList.add('blurry');
+    });
+
+    const clientIdField = document.getElementById('clientId');
+    clientIdField.classList.add('blurry');
+
+    clientIdField.addEventListener('focus', () => {
+        clientIdField.classList.remove('blurry');
+    });
+
+    clientIdField.addEventListener('blur', () => {
+        clientIdField.classList.add('blurry');
+    });
 }
 
 function showQuestionDisplay(text) {
