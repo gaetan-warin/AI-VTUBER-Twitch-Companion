@@ -44,7 +44,7 @@ API_URL_PORT = os.getenv("API_URL_PORT")
 AVATAR_MODEL = os.getenv("AVATAR_MODEL")
 
 # Configure SocketIO with CORS and async mode
-socketio = SocketIO(app, cors_allowed_origins=AVATAR_MODEL, async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins=SOCKETIO_CORS_ALLOWED, async_mode='eventlet')
 
 class Config:
     """Configuration class to manage environment variables."""
@@ -156,7 +156,7 @@ def handle_trigger_event(data):
 
 def emit_celebration_event(event_type, username):
     """Emit celebration events to the frontend based on event type.
-    
+
     Args:
         event_type (str): Type of event ('follow' or 'sub')
         username (str): Username of the follower/subscriber
@@ -171,10 +171,10 @@ def emit_celebration_event(event_type, username):
 
 def process_ai_request(user_input):
     """Process user input through Ollama AI and return formatted response.
-    
+
     Args:
         user_input (str): The user's message to process
-        
+
     Returns:
         tuple: (response_dict, status_code)
     """
@@ -218,10 +218,10 @@ def process_ai_request(user_input):
 
 def clean_response(response):
     """Clean and format the AI response text.
-    
+
     Args:
         response (str): Raw response text from AI
-        
+
     Returns:
         str: Cleaned response with removed tags and normalized whitespace
     """
@@ -235,7 +235,7 @@ def clean_response(response):
 @app.route('/models/<path:filename>')
 def serve_model_files(filename):
     """Serve Live2D model files and resources from the models directory.
-    
+
     Args:
         filename (str): Path to the requested model file
     """
@@ -296,12 +296,12 @@ def handle_trigger_ai_request(data):
 
 @socketio.on('save_config')
 def handle_save_config(data):
-    """Save configuration data to .env file."""
+    """Save configuration data to .env file and update twitch listener."""
     try:
         # Load existing .env values
         env_file_path = find_dotenv()
         load_dotenv(env_file_path, override=False, encoding='latin1')
-        
+
         # Read existing .env file
         existing_env = {}
         if os.path.exists(env_file_path):
@@ -323,15 +323,33 @@ def handle_save_config(data):
                         value = f'"{value}"'
                     f.write(f"{key}={value}\n")
         print("Configuration saved to .env")
+
+        # Forward relevant config updates to twitch listener
+        twitch_config = {
+            'EXTRA_DELAY_LISTENER': data.get('EXTRA_DELAY_LISTENER', ''),
+            'NB_SPAM_MESSAGE': data.get('NB_SPAM_MESSAGE', ''),
+            'BOT_NAME_FOLLOW_SUB': data.get('BOT_NAME_FOLLOW_SUB', ''),
+            'KEY_WORD_FOLLOW': data.get('KEY_WORD_FOLLOW', ''),
+            'KEY_WORD_SUB': data.get('KEY_WORD_SUB', ''),
+            'DELIMITER_NAME': data.get('DELIMITER_NAME', ''),
+            'DELIMITER_NAME_END': data.get('DELIMITER_NAME_END', '')
+        }
+        socketio.emit('update_twitch_config', twitch_config)
+        socketio.emit('save_config_response', {'status': 'success'})
+
     except (IOError, OSError) as e:
-        print(f"File operation error: {e}")
+        error_msg = f"File operation error: {str(e)}"
+        print(error_msg)
+        socketio.emit('save_config_response', {'status': 'error', 'message': error_msg})
     except (KeyError, ValueError) as e:
-        print(f"Data format error: {e}")
+        error_msg = f"Data format error: {str(e)}"
+        print(error_msg)
+        socketio.emit('save_config_response', {'status': 'error', 'message': error_msg})
 
 @socketio.on('update_live_global_env')
 def handle_update_live_global_env(data):
     """Update global environment variables with new configuration values.
-    
+
     Handles real-time updates to persona, model, and bot settings without server restart.
     """
     try:
@@ -354,7 +372,7 @@ def handle_update_live_global_env(data):
 @socketio.on('load_config')
 def handle_load_config():
     """Load and emit current configuration values from environment variables.
-    
+
     Reloads the .env file and sends all configuration values to the client.
     """
     try:
@@ -375,17 +393,43 @@ def handle_load_config():
         }
         socketio.emit('load_config', env_config)
     except (IOError, OSError) as e:
-        socketio.emit('load_config_error', 
+        socketio.emit('load_config_error',
                      {'status': 'error', 'message': f'File operation error: {str(e)}'})
     except (KeyError, ValueError) as e:
-        socketio.emit('load_config_error', 
+        socketio.emit('load_config_error',
                      {'status': 'error', 'message': f'Configuration error: {str(e)}'})
+
+@socketio.on('update_twitch_listener')
+def handle_update_twitch_listener(data):
+    """Update Twitch listener configuration values in real-time.
+
+    Handles real-time updates to twitch listener settings without restart.
+    """
+    try:
+        # Forward the configuration update to the twitch listener
+        socketio.emit('update_twitch_config', {
+            'EXTRA_DELAY_LISTENER': data.get('extraDelayListener', ''),
+            'NB_SPAM_MESSAGE': data.get('nbSpamMessage', ''),
+            'BOT_NAME_FOLLOW_SUB': data.get('botNameFollowSub', ''),
+            'KEY_WORD_FOLLOW': data.get('keyWordFollow', ''),
+            'KEY_WORD_SUB': data.get('keyWordSub', ''),
+            'DELIMITER_NAME': data.get('delimiterName', ''),
+            'DELIMITER_NAME_END': data.get('delimiterNameEnd', '')
+        })
+        socketio.emit('update_twitch_listener_response',
+                     {'status': 'success', 'message': 'Twitch listener updated successfully'})
+    except (KeyError, ValueError) as e:
+        socketio.emit('update_twitch_listener_response',
+                     {'status': 'error', 'message': f'Data format error: {str(e)}'})
+    except (ConnectionError, TimeoutError) as e:
+        socketio.emit('update_twitch_listener_response',
+                     {'status': 'error', 'message': f'Socket connection error: {str(e)}'})
 
 # Serve static files
 @app.route('/static/<path:filename>')
 def static_files(filename):
     """Serve static files (CSS, JS, images) from the static directory.
-    
+
     Args:
         filename (str): Path to the requested static file
     """

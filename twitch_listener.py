@@ -185,7 +185,18 @@ class TwitchBot(commands.Bot):
         """Wait for the configured delay between message processing."""
         await asyncio.sleep(self.extra_delay)
 
+
 if __name__ == "__main__":
     bot = TwitchBot()
+
+    @socket.on('update_twitch_config')
+    def handle_config_update(data):
+        """Handle real-time configuration updates from the web interface."""
+        try:
+            bot.update(**data)
+            print("Twitch listener configuration updated successfully")
+        except (ValueError, TypeError) as e:
+            print(f"Error updating twitch listener configuration: {e}")
+
     bot.run()
     socket.disconnect()

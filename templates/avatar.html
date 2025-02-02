@@ -42,32 +42,61 @@
         </div>
         <div class="sidebar-content">
             <div class="tab-content" id="general" style="display: block;">
-                <label for="avatarModel">Avatar Model:</label>
-                <input type="text" id="avatarModel" value="shizuku">
-                <label for="personaName">Persona Name:</label>
-                <input type="text" id="personaName" value="Sarah">
-                <label for="personaRole">Persona Role:</label>
-                <textarea id="personaRole">Virtual assistant providing calm and engaging interactions.</textarea>
-                <label for="prePrompt">Pre Prompt:</label>
-                <textarea id="prePrompt">Please respond concisely and avoid monologues. Ensure your behavior strictly adheres to Twitch's Terms of Service, Community Guidelines, and Developer Agreement. Filter out prohibited content (hate speech, threats, etc.), promote respectful interactions, avoid illegal or harmful activities, prevent spam, respect user privacy, and always identify yourself as a bot. Follow channel-specific rules, provide neutral responses when unsure, and be updated regularly to comply with any changes in Twitch's policies.</textarea>
+                <div class="settings-container">
+                    <label for="avatarModel">Avatar Model:</label>
+                    <input type="text" id="avatarModel" value="shizuku">
+                    <label for="personaName">Persona Name:</label>
+                    <input type="text" id="personaName" value="Sarah">
+                    <label for="personaRole">Persona Role:</label>
+                    <textarea id="personaRole">Virtual assistant providing calm and engaging interactions.</textarea>
+                    <label for="prePrompt">Pre Prompt:</label>
+                    <textarea id="prePrompt">Please respond concisely and avoid monologues. Ensure your behavior strictly adheres to Twitch's Terms of Service, Community Guidelines, and Developer Agreement. Filter out prohibited content (hate speech, threats, etc.), promote respectful interactions, avoid illegal or harmful activities, prevent spam, respect user privacy, and always identify yourself as a bot. Follow channel-specific rules, provide neutral responses when unsure, and be updated regularly to comply with any changes in Twitch's policies.</textarea>
+                </div>
             </div>
             <div class="tab-content" id="technical" style="display: none;">
-                <label for="ollamaModel">Ollama Model:</label>
-                <select id="ollamaModel"></select>
-                <label for="channelName">Channel Name:</label>
-                <input type="text" id="channelName" value="ai_chat_bot">
-                <label for="token">Twitch Token:</label>
-                <input type="text" id="token" value="YOUR_TWITCH_TOKEN">
-                <label for="clientId">Twitch Client ID:</label>
-                <input type="text" id="clientId" value="YOUR_TWITCH_CLIENT_ID">
-                <label for="botName">Bot Name:</label>
-                <input type="text" id="botName" value="ai_chat_bot">
-                <label for="extraDelayListener">Extra Delay Listener:</label>
-                <input type="number" id="extraDelayListener" value="3">
-                <label for="nbSpamMessage">Number of Spam Messages:</label>
-                <input type="number" id="nbSpamMessage" value="3">
+                <div class="settings-container">
+                    <div class="settings-section">
+                        <h3>AI Settings</h3>
+                        <label for="ollamaModel">Ollama Model:</label>
+                        <select id="ollamaModel"></select>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Twitch Connection</h3>
+                        <label for="channelName">Channel Name:</label>
+                        <input type="text" id="channelName" value="ai_chat_bot">
+                        <label for="token">Twitch Token:</label>
+                        <input type="text" id="token" value="YOUR_TWITCH_TOKEN">
+                        <label for="clientId">Twitch Client ID:</label>
+                        <input type="text" id="clientId" value="YOUR_TWITCH_CLIENT_ID">
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Bot Behavior</h3>
+                        <label for="extraDelayListener">Extra Delay Listener:</label>
+                        <input type="number" id="extraDelayListener" value="3" step="0.5">
+                        <label for="nbSpamMessage">Spam Time Window:</label>
+                        <input type="number" id="nbSpamMessage" value="3" step="0.5">
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Follow/Sub Settings</h3>
+                        <label for="botNameFollowSub">Follow/Sub Bot Name:</label>
+                        <input type="text" id="botNameFollowSub" value="botwarga">
+                        <label for="keyWordFollow">Follow Keyword:</label>
+                        <input type="text" id="keyWordFollow" value="New FOLLOW(S)">
+                        <label for="keyWordSub">Sub Keyword:</label>
+                        <input type="text" id="keyWordSub" value="NEW SUB">
+                        <label for="delimiterName">Name Delimiter Start:</label>
+                        <input type="text" id="delimiterName" value="{">
+                        <label for="delimiterNameEnd">Name Delimiter End:</label>
+                        <input type="text" id="delimiterNameEnd" value="}">
+                    </div>
+                </div>
             </div>
-            <button id="saveConfigBtn">Save</button>
+            <div class="save-button-container">
+                <button id="saveConfigBtn">Save Configuration</button>
+            </div>
         </div>
     </div>
 
@@ -328,19 +357,11 @@
                 const prePrompt = document.getElementById('prePrompt').value.trim();
                 const ollamaModel = document.getElementById('ollamaModel').value.trim();
                 const avatarModel = document.getElementById('avatarModel').value.trim();
-                socket.emit('update_live_global_env', {
-                    avatarModel,
-                    personaName,
-                    personaRole,
-                    prePrompt,
-                    ollamaModel,
-                    channelName,
-                    token,
-                    clientId,
-                    botName,
-                    extraDelayListener,
-                    nbSpamMessage
-                });
+                const botNameFollowSub = document.getElementById('botNameFollowSub').value.trim();
+                const keyWordFollow = document.getElementById('keyWordFollow').value.trim();
+                const keyWordSub = document.getElementById('keyWordSub').value.trim();
+                const delimiterName = document.getElementById('delimiterName').value.trim();
+                const delimiterNameEnd = document.getElementById('delimiterNameEnd').value.trim();
 
                 // Save configuration to .env file
                 const config = {
@@ -354,7 +375,12 @@
                     BOT_NAME: botName,
                     EXTRA_DELAY_LISTENER: extraDelayListener,
                     NB_SPAM_MESSAGE: nbSpamMessage,
-                    OLLAMA_MODEL: ollamaModel
+                    OLLAMA_MODEL: ollamaModel,
+                    BOT_NAME_FOLLOW_SUB: botNameFollowSub,
+                    KEY_WORD_FOLLOW: keyWordFollow,
+                    KEY_WORD_SUB: keyWordSub,
+                    DELIMITER_NAME: delimiterName,
+                    DELIMITER_NAME_END: delimiterNameEnd
                 };
                 socket.emit('save_config', config);
             });
@@ -399,6 +425,19 @@
                 document.getElementById('extraDelayListener').value = data.EXTRA_DELAY_LISTENER || '';
                 document.getElementById('nbSpamMessage').value = data.NB_SPAM_MESSAGE || '';
                 document.getElementById('ollamaModel').value = data.OLLAMA_MODEL || '';
+                document.getElementById('botNameFollowSub').value = data.BOT_NAME_FOLLOW_SUB || '';
+                document.getElementById('keyWordFollow').value = data.KEY_WORD_FOLLOW || '';
+                document.getElementById('keyWordSub').value = data.KEY_WORD_SUB || '';
+                document.getElementById('delimiterName').value = data.DELIMITER_NAME || '';
+                document.getElementById('delimiterNameEnd').value = data.DELIMITER_NAME_END || '';
+            });
+
+            socket.on('save_config_response', function(response) {
+                if (response.status === 'success') {
+                    showNotification('success', 'Configuration saved successfully');
+                } else {
+                    showNotification('error', response.message);
+                }
             });
         }
 
