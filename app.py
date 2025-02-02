@@ -432,10 +432,10 @@ def handle_update_twitch_listener(data):
 # Serve static files
 @app.route('/static/<path:filename>')
 def static_files(filename):
-    """Serve static files (CSS, JS, images) from the static directory.
+    """Serve static files (CSS, JS, images, sounds) from the static directory.
 
     Args:
-        filename (str): Path to the requested static file
+        filename (str): Path to the requested static file within the static directory
     """
     return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 
