@@ -5,13 +5,13 @@ and subscriptions, forwarding them to a WebSocket server for AI processing
 and avatar animations.
 """
 
-import time
-from twitchio.ext import commands
 import asyncio
-from dotenv import load_dotenv
 import os
-from socketio import Client
+import time
 import bleach
+from dotenv import load_dotenv
+from socketio import Client
+from twitchio.ext import commands
 
 # Load default .env file
 load_dotenv(encoding='latin1')
@@ -38,13 +38,17 @@ DELIMITER_NAME_END = "}"
 socket = Client()
 
 def connect_socket():
+    """Establish connection to WebSocket server with retry mechanism.
+
+    Attempts to connect up to 10 times with 2-second delay between retries.
+    """
     retries = 10
     for attempt in range(retries):
         try:
             socket.connect(f"{API_URL}:{API_URL_PORT}")
             print("Connected to WebSocket server")
             break
-        except Exception as e:
+        except (ConnectionError, TimeoutError) as e:
             print(f"Connection attempt {attempt + 1} failed: {e}")
             time.sleep(2)
     else:
@@ -53,7 +57,14 @@ def connect_socket():
 connect_socket()
 
 class TwitchBot(commands.Bot):
+    """Twitch chat bot that handles messages and events.
+
+    Manages chat interactions, follows, subscriptions, and AI request processing
+    with built-in spam protection and delay management.
+    """
+
     def __init__(self):
+        """Initialize the Twitch bot with configuration and state variables."""
         super().__init__(
             token=TOKEN,
             client_id=CLIENT_ID,
@@ -61,7 +72,7 @@ class TwitchBot(commands.Bot):
             prefix="",
             initial_channels=CHANNEL_NAME,
         )
-        
+
         self.processing = False
         self.processing_time = 0
         self.user_last_message = {}
@@ -69,22 +80,32 @@ class TwitchBot(commands.Bot):
         self.extra_delay = EXTRA_DELAY_LISTENER
 
     async def event_ready(self):
+        """Handle bot ready event, logging connection status."""
         print(f"Logged in as | {self.nick}")
         print(f"Connected to channel | {CHANNEL_NAME}")
 
     async def event_message(self, message):
+        """Process incoming Twitch chat messages.
+
+        Handles follow/sub events, spam detection, and AI requests.
+
+        Args:
+            message: The incoming Twitch chat message object
+        """
         if message.echo:
             return
 
         if message.author.name == BOT_NAME_FOLLOW_SUB and KEY_WORD_FOLLOW in message.content:
             follower_name = message.content.split(DELIMITER_NAME)[1].split(DELIMITER_NAME_END)[0]
-            socket.emit('speak', {'text': f"Wonderful, we have a new follower. Thank you: {follower_name}"})
+            text = f"Wonderful, we have a new follower. Thank you: {follower_name}"
+            socket.emit('speak', {'text': text})
             socket.emit('trigger_event', {'event_type': 'follow', 'username': follower_name})
             return
-        
+
         if message.author.name == BOT_NAME_FOLLOW_SUB and KEY_WORD_SUB in message.content:
             follower_name = message.content.split(DELIMITER_NAME)[1].split(DELIMITER_NAME_END)[0]
-            socket.emit('speak', {'text': f"Incredible, we have a new subscriber. Thank you so much: {follower_name}"})
+            text = f"Incredible, we have a new subscriber. Thank you so much: {follower_name}"
+            socket.emit('speak', {'text': text})
             socket.emit('trigger_event', {'event_type': 'sub', 'username': follower_name})
             return
 
@@ -104,7 +125,8 @@ class TwitchBot(commands.Bot):
         if message.content.startswith('!ai'):
             user_input = message.content[4:].strip()
             if not user_input:
-                await message.channel.send(f"{message.author.name}, please provide a valid question.")
+                msg = f"{message.author.name}, please provide a valid question."
+                await message.channel.send(msg)
                 return
 
             self.processing = True
@@ -116,17 +138,22 @@ class TwitchBot(commands.Bot):
 
                 # Emit the AI request to the WebSocket server
                 socket.emit('trigger_ai_request', {'message': sanitized_input})
-                
-                # Emit username and question to WebSocket server
-                socket.emit('display_question', {'username': message.author.name, 'question': sanitized_input})
-                    
-            except Exception as e:
-                print(f"Error sending message to server: {e}")
 
+                # Emit username and question to WebSocket server
+                data = {'username': message.author.name, 'question': sanitized_input}
+                socket.emit('display_question', data)
+
+            except (ConnectionError, TimeoutError) as e:
+                print(f"Socket connection error: {e}")
+                await self._wait_for_extra_delay()
+                self.processing = False
+            except ValueError as e:
+                print(f"Data processing error: {e}")
                 await self._wait_for_extra_delay()
                 self.processing = False
 
     async def _wait_for_extra_delay(self):
+        """Wait for the configured delay between message processing."""
         await asyncio.sleep(self.extra_delay)
 
 if __name__ == "__main__":
