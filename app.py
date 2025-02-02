@@ -388,7 +388,12 @@ def handle_load_config():
             'CLIENT_ID': os.getenv('CLIENT_ID', ''),
             'EXTRA_DELAY_LISTENER': os.getenv('EXTRA_DELAY_LISTENER', ''),
             'NB_SPAM_MESSAGE': os.getenv('NB_SPAM_MESSAGE', ''),
-            'OLLAMA_MODEL': os.getenv('OLLAMA_MODEL', '')
+            'OLLAMA_MODEL': os.getenv('OLLAMA_MODEL', ''),
+            'BOT_NAME_FOLLOW_SUB': os.getenv('BOT_NAME_FOLLOW_SUB', ''),
+            'KEY_WORD_FOLLOW': os.getenv('KEY_WORD_FOLLOW', ''),
+            'KEY_WORD_SUB': os.getenv('KEY_WORD_SUB', ''),
+            'DELIMITER_NAME': os.getenv('DELIMITER_NAME', ''),
+            'DELIMITER_NAME_END': os.getenv('DELIMITER_NAME_END', '')
         }
         socketio.emit('load_config', env_config)
     except (IOError, OSError) as e:

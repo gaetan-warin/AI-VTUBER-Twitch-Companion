@@ -1,8 +1,10 @@
 Step 1
+    Refactor static with subfolder /css /js /mp3
+    move inline html js logic to js file
     UI CFG => Background change management
-    Speach to text to make Bot answer you directly, 
+    Speach to text to make Bot answer you directly,
     UI CFG => Activate/desactive Microphone
-    UI CFG => what name of bot to listen ? What encupsalation character for first/last character ? Wich sound to play ? List from mp3 of static folder ? what to say ?
+    UI CFG => Wich sound to play ? List from mp3 of static folder ? what to say ?
 NEXT
     UI CFG => Config react only on some word like a "Hey, Sarah !"
     UI CFG => Avatar load management
