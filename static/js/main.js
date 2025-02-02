@@ -34,20 +34,8 @@ function main(modelPath) {
     });
 
     app.ticker.add(() => {
-        if (isSpeaking) {
+        if (isSpeaking)
             mouthState.value = Math.sin(performance.now() / 200) / 2 + 0.5;
-            
-            if (currentModel?.internalModel?.coreModel) {
-                try {
-                    currentModel.internalModel.coreModel.setParamFloat(
-                        'PARAM_MOUTH_OPEN_Y', 
-                        mouthState.value
-                    );
-                } catch (error) {
-                    console.error('Mouth parameter update failed:', error);
-                }
-            }
-        }
     });
 
     loadModel(app, modelPath);
@@ -68,7 +56,10 @@ async function loadModel(app, modelPath) {
         model.width = size;
         model.height = size;
 
-        // Log available parameters for debugging
+        model.internalModel.motionManager.update = () => {
+            // updateFn.call(model.internalModel.motionManager);
+            model.internalModel.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
+        }
 
     } catch (error) {
         console.error('Model loading error:', error);
