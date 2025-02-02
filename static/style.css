@@ -409,3 +409,35 @@ button:active {
     pointer-events: none;
     z-index: 9999;
 }
+
+.notification {
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 280px;
+    padding: 15px;
+    border-radius: 4px;
+    color: white;
+    font-size: 14px;
+    z-index: 9999;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    text-align: center;
+}
+
+.notification.show {
+    top: 20px;
+    opacity: 1;
+    visibility: visible;
+}
+
+.notification.success {
+    background-color: #4CAF50;
+}
+
+.notification.error {
+    background-color: #f44336;
+}

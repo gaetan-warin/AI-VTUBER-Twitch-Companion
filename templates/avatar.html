@@ -20,6 +20,7 @@
     <canvas id="canvas"></canvas>
     <div id="speech-bubble" class="speech-bubble"></div>
     <div id="question-display" class="question-display" style="display: none;"></div>
+    <div id="notification" class="notification"></div>
 
     <div class="controls">
         <div class="input-group">
@@ -516,6 +517,22 @@
                 origin: { y: 0.6 },
                 colors: ['#ff0000', '#00ff00', '#0000ff']
             });
+        }
+
+        function showNotification(type, message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+
+            // Hide notification after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
         }
 
         // Initial setup
