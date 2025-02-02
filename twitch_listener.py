@@ -78,6 +78,35 @@ class TwitchBot(commands.Bot):
         self.user_last_message = {}
         self.spam_time_window = NB_SPAM_MESSAGE
         self.extra_delay = EXTRA_DELAY_LISTENER
+        self.bot_name_follow_sub = BOT_NAME_FOLLOW_SUB
+        self.key_word_follow = KEY_WORD_FOLLOW
+        self.key_word_sub = KEY_WORD_SUB
+        self.delimiter_name = DELIMITER_NAME
+        self.delimiter_name_end = DELIMITER_NAME_END
+
+    def update(self, **kwargs):
+        """Update bot configuration values.
+
+        Args:
+            **kwargs: Configuration key-value pairs to update
+        """
+        config_map = {
+            'EXTRA_DELAY_LISTENER': ('extra_delay', float),
+            'NB_SPAM_MESSAGE': ('spam_time_window', float),
+            'BOT_NAME_FOLLOW_SUB': ('bot_name_follow_sub', str),
+            'KEY_WORD_FOLLOW': ('key_word_follow', str),
+            'KEY_WORD_SUB': ('key_word_sub', str),
+            'DELIMITER_NAME': ('delimiter_name', str),
+            'DELIMITER_NAME_END': ('delimiter_name_end', str)
+        }
+
+        for key, value in kwargs.items():
+            if key in config_map:
+                attr_name, converter = config_map[key]
+                try:
+                    setattr(self, attr_name, converter(value))
+                except (ValueError, TypeError) as e:
+                    print(f"Error updating {key}: {e}")
 
     async def event_ready(self):
         """Handle bot ready event, logging connection status."""
@@ -95,15 +124,15 @@ class TwitchBot(commands.Bot):
         if message.echo:
             return
 
-        if message.author.name == BOT_NAME_FOLLOW_SUB and KEY_WORD_FOLLOW in message.content:
-            follower_name = message.content.split(DELIMITER_NAME)[1].split(DELIMITER_NAME_END)[0]
+        if message.author.name == self.bot_name_follow_sub and self.key_word_follow in message.content:
+            follower_name = message.content.split(self.delimiter_name)[1].split(self.delimiter_name_end)[0]
             text = f"Wonderful, we have a new follower. Thank you: {follower_name}"
             socket.emit('speak', {'text': text})
             socket.emit('trigger_event', {'event_type': 'follow', 'username': follower_name})
             return
 
-        if message.author.name == BOT_NAME_FOLLOW_SUB and KEY_WORD_SUB in message.content:
-            follower_name = message.content.split(DELIMITER_NAME)[1].split(DELIMITER_NAME_END)[0]
+        if message.author.name == self.bot_name_follow_sub and self.key_word_sub in message.content:
+            follower_name = message.content.split(self.delimiter_name)[1].split(self.delimiter_name_end)[0]
             text = f"Incredible, we have a new subscriber. Thank you so much: {follower_name}"
             socket.emit('speak', {'text': text})
             socket.emit('trigger_event', {'event_type': 'sub', 'username': follower_name})
