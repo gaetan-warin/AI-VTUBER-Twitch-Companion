@@ -68,6 +68,8 @@ function loadAvatarModel(modelPath) {
         return;
     }
 
+    console.log(`Loading model from path: ${modelPath}`); // Add logging
+
     const app = new PIXI.Application({
         view: document.getElementById('canvas'),
         autoStart: true,
@@ -84,6 +86,7 @@ function loadAvatarModel(modelPath) {
 
     try {
         PIXI.live2d.Live2DModel.fromModelSettingsFile(modelPath).then(model => {
+            console.log('Model loaded successfully:', model); // Add logging
             app.stage.addChild(model);
             currentModel = model;
 
@@ -99,6 +102,8 @@ function loadAvatarModel(modelPath) {
                 updateFn.call(model.internal.motionManager);
                 model.internal.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
             }
+        }).catch(error => {
+            console.error('Error loading model:', error); // Add error logging
         });
     } catch (error) {
         console.error('Model loading error:', error);
@@ -315,8 +320,7 @@ function setupEventListeners() {
             KEY_WORD_FOLLOW: keyWordFollow,
             KEY_WORD_SUB: keyWordSub,
             DELIMITER_NAME: delimiterName,
-            DELIMITER_NAME_END: delimiterNameEnd,
-            BACKGROUND_IMAGE: backgroundImage
+            DELIMITER_NAME_END: delimiterNameEnd
         };
         socket.emit('save_config', config);
     });
@@ -378,7 +382,12 @@ function setupEventListeners() {
     // Load new avatar model on change
     avatarModelSelect.addEventListener('change', function() {
         const selectedModel = avatarModelSelect.value;
-        const modelPath = `models/${selectedModel}/${selectedModel}.model.json`;
+        let modelPath;
+        if (selectedModel === 'mao_pro') {
+            modelPath = `models/${selectedModel}/mao_pro.cdi3.json`;
+        } else {
+            modelPath = `models/${selectedModel}/${selectedModel}.model.json`;
+        }
         loadAvatarModel(modelPath);
     });
 }
