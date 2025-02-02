@@ -19,7 +19,7 @@ celebrationAudio.volume = 0.3; // Set volume to 30%
 celebrationAudio.preload = 'auto'; // Preload the audio
 
 // Initialize application
-function main() {
+function main(modelPath) {
     if (!modelPath) {
         console.error('Model path not set.');
         return;
@@ -34,29 +34,42 @@ function main() {
     });
 
     app.ticker.add(() => {
-        // mimic the interpolation value, 0-1
-        if(isSpeaking)
+        if (isSpeaking) {
             mouthState.value = Math.sin(performance.now() / 200) / 2 + 0.5;
+            
+            if (currentModel?.internalModel?.coreModel) {
+                try {
+                    currentModel.internalModel.coreModel.setParamFloat(
+                        'PARAM_MOUTH_OPEN_Y', 
+                        mouthState.value
+                    );
+                } catch (error) {
+                    console.error('Mouth parameter update failed:', error);
+                }
+            }
+        }
     });
 
+    loadModel(app, modelPath);
+}
+
+async function loadModel(app, modelPath) {
     try {
-        PIXI.live2d.Live2DModel.from(modelPath).then(model => {
-            app.stage.addChild(model);
-            currentModel = model;
+        const model = await PIXI.live2d.Live2DModel.from(modelPath);
+        app.stage.addChild(model);
+        currentModel = model;
 
-            model.anchor.set(0.5, 0.5);
-            model.position.set(innerWidth / 2, innerHeight / 2);
+        // Model positioning
+        model.anchor.set(0.5, 0.5);
+        model.position.set(innerWidth / 2, innerHeight / 2);
+        
+        // Model sizing
+        const size = Math.min(innerWidth, innerHeight) * 0.8;
+        model.width = size;
+        model.height = size;
 
-            const size = Math.min(innerWidth, innerHeight) * 0.8;
-            model.width = size;
-            model.height = size;
+        // Log available parameters for debugging
 
-            const updateFn = model.internal.motionManager.update;
-            model.internal.motionManager.update = () => {
-                updateFn.call(model.internal.motionManager);
-                model.internal.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
-            }
-        });
     } catch (error) {
         console.error('Model loading error:', error);
     }
@@ -68,46 +81,12 @@ function loadAvatarModel(modelPath) {
         return;
     }
 
-    console.log(`Loading model from path: ${modelPath}`); // Add logging
-
-    const app = new PIXI.Application({
-        view: document.getElementById('canvas'),
-        autoStart: true,
-        resizeTo: window,
-        transparent: true,
-        antialias: true
-    });
-
-    app.ticker.add(() => {
-        // mimic the interpolation value, 0-1
-        if (isSpeaking)
-            mouthState.value = Math.sin(performance.now() / 200) / 2 + 0.5;
-    });
-
-    try {
-        PIXI.live2d.Live2DModel.from(modelPath).then(model => {
-            console.log('Model loaded successfully:', model); // Add logging
-            app.stage.addChild(model);
-            currentModel = model;
-
-            model.anchor.set(0.5, 0.5);
-            model.position.set(innerWidth / 2, innerHeight / 2);
-
-            const size = Math.min(innerWidth, innerHeight) * 0.8;
-            model.width = size;
-            model.height = size;
-
-            const updateFn = model.internal.motionManager.update;
-            model.internal.motionManager.update = () => {
-                updateFn.call(model.internal.motionManager);
-                model.internal.coreModel.setParamFloat('PARAM_MOUTH_OPEN_Y', mouthState.value);
-            }
-        }).catch(error => {
-            console.error('Error loading model:', error); // Add error logging
-        });
-    } catch (error) {
-        console.error('Model loading error:', error);
+    if (currentModel) {
+        currentModel.destroy();
+        currentModel = null;
     }
+
+    main(modelPath);
 }
 
 // Voice initialization
@@ -491,31 +470,15 @@ function showNotification(type, message) {
 }
 
 // Socket event listeners
-socket.on('speak_text', data => {
-    console.log("Received text to speak:", data.text);
-    speak(data.text);
-});
-
+socket.on('speak_text', data => speak(data.text));
 socket.on('model_path', data => {
     modelPath = data.path;
     console.log("Received model path:", modelPath);
-    main();
+    main(modelPath);
 });
-
-socket.on('ai_response', data => {
-    console.log("Received AI response:", data.text);
-    speak(data.text);
-});
-
-socket.on('display_question', data => {
-    showQuestionDisplay(`${data.username}: ${data.question}`);
-});
-
-socket.on('fireworks', data => {
-    console.log(data.message);
-    triggerFireworks();
-});
-
+socket.on('ai_response', data => speak(data.text));
+socket.on('display_question', showQuestionDisplay);
+socket.on('fireworks', triggerFireworks);
 socket.on('connect', () => console.log('WebSocket connected:', socket.id));
 socket.on('disconnect', () => console.log('WebSocket disconnected'));
 
@@ -554,6 +517,7 @@ socket.on('save_config_response', function(response) {
 
 // Initial setup
 document.addEventListener('DOMContentLoaded', () => {
+    
     setupEventListeners();
     socket.connect();
     socket.emit('request_model_path');
