@@ -63,7 +63,7 @@ textarea {
 }
 
 #prePrompt {
-    height: 310px;
+    height: 340px;
 }
 
 button {
@@ -348,7 +348,7 @@ button:active {
 }
 
 .tab-button.active {
-    background: #45a049;
+    background: #317433;
 }
 
 .tab-content {
@@ -523,4 +523,21 @@ button:active {
     color: black;
     text-decoration: none;
     cursor: pointer;
+}
+
+#configBtn {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+#listenerStatusText {
+    color:red;
+}
+
+#stopListenerBtn{
+    background-color: rgb(138, 40, 40);
+}
+
+#configBtn {
+    background-color: rgb(40, 40, 109);
 }
