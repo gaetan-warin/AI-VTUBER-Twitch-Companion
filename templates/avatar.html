@@ -96,6 +96,16 @@
                         <label for="clientId">Twitch Client ID:</label>
                         <input type="text" id="clientId" class="blurry" value="YOUR_TWITCH_CLIENT_ID">
                     </div>
+
+                    <div class="settings-section">
+                        <h3>Twitch Listener</h3>
+                        <div class="button-group-inline">
+                            <button id="startListenerBtn">Start Listener</button>
+                            <button id="stopListenerBtn">Stop Listener</button>
+                        </div>
+                        <div id="listenerStatus" class="status-indicator">Status: <span id="listenerStatusText">Stopped</span></div>
+                    </div>
+
                 </div>
             </div>
             <div class="save-button-container">

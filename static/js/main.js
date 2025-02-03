@@ -563,6 +563,44 @@ socket.on('load_config', config => {
     applyConfig(config);
 });
 
+function updateListenerStatus(status) {
+    const statusText = document.getElementById('listenerStatusText');
+    statusText.textContent = status ? 'Running' : 'Stopped';
+    statusText.style.color = status ? 'green' : 'red';
+}
+
+function checkListenerStatus() {
+    fetch('/listener_status')
+        .then(response => response.json())
+        .then(data => {
+            updateListenerStatus(data.status === 'running');
+        });
+}
+
+document.getElementById('startListenerBtn').addEventListener('click', () => {
+    fetch('/start_listener', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                updateListenerStatus(true);
+            } else {
+                alert('Failed to start listener: ' + data.message);
+            }
+        });
+});
+
+document.getElementById('stopListenerBtn').addEventListener('click', () => {
+    fetch('/stop_listener', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                updateListenerStatus(false);
+            } else {
+                alert('Failed to stop listener: ' + data.message);
+            }
+        });
+});
+
 // Initial setup
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
@@ -570,4 +608,5 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.emit('request_model_path');
     populateOllamaModels();
     socket.emit('load_config');
+    checkListenerStatus(); // Check listener status on page load
 });

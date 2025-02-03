@@ -9,6 +9,7 @@ import re
 import socket
 import eventlet
 import bleach
+import subprocess
 from flask import Flask, render_template, send_from_directory, request, jsonify, abort
 from flask_socketio import SocketIO
 from dotenv import load_dotenv, find_dotenv
@@ -66,10 +67,43 @@ class Config:
 
 config = Config()
 
+listener_process = None
+
 @app.route('/')
 def home():
     """Render the main avatar interface page."""
     return render_template('avatar.html')
+
+@app.route('/start_listener', methods=['POST'])
+def start_listener():
+    """Start the Twitch listener bot."""
+    global listener_process
+    listener_dir = os.path.join(app.root_path, 'listener')
+    venv_python = os.path.join(app.root_path, 'venv', 'Scripts', 'python.exe')
+    if listener_process is None:
+        if not os.path.isdir(listener_dir):
+            return jsonify({'status': 'error', 'message': 'Listener directory does not exist'}), 400
+        listener_process = subprocess.Popen([venv_python, 'twitch_listener.py'], cwd=listener_dir)
+        return jsonify({'status': 'success', 'message': 'Twitch listener started'}), 200
+    return jsonify({'status': 'error', 'message': 'Twitch listener already running'}), 400
+
+@app.route('/stop_listener', methods=['POST'])
+def stop_listener():
+    """Stop the Twitch listener bot."""
+    global listener_process
+    if listener_process is not None:
+        listener_process.terminate()
+        listener_process = None
+        return jsonify({'status': 'success', 'message': 'Twitch listener stopped'}), 200
+    return jsonify({'status': 'error', 'message': 'Twitch listener not running'}), 400
+
+@app.route('/listener_status', methods=['GET'])
+def listener_status():
+    """Check the status of the Twitch listener bot."""
+    global listener_process
+    if listener_process is not None and listener_process.poll() is None:
+        return jsonify({'status': 'running'}), 200
+    return jsonify({'status': 'stopped'}), 200
 
 @app.route('/trigger_speak', methods=['POST'])
 def trigger_speak():
@@ -96,11 +130,11 @@ def trigger_ai_request():
             socketio.emit('speak_text', {'text': response['message']})
         return jsonify(response), status_code
     except (ValueError, KeyError) as e:
-        return jsonify({'status': 'error', 'message': f'Invalid request format: {str(e)}'}), 400
+        return jsonify({'status': 'error', 'message': f'Invalid request format: {str(e)}')}), 400
     except ollama.ResponseError as e:
-        return jsonify({'status': 'error', 'message': f'AI processing error: {str(e)}'}), 500
+        return jsonify({'status': 'error', 'message': f'AI processing error: {str(e)}')}), 500
     except (ConnectionError, TimeoutError) as e:
-        return jsonify({'status': 'error', 'message': f'Service connection error: {str(e)}'}), 503
+        return jsonify({'status': 'error', 'message': f'Service connection error: {str(e)}')}), 503
 
 @app.route('/get_model', methods=['GET'])
 def get_model():
@@ -115,13 +149,12 @@ def get_ollama_models():
     """Retrieve list of available Ollama models."""
     try:
         response = ollama.list()
-        models = response.models
-        model_names = [model.model for model in models]
+        model_names = [model['model'] for model in response['models']]
         return jsonify({'status': 'success', 'models': model_names}), 200
     except (ollama.ResponseError, ConnectionError) as e:
-        return jsonify({'status': 'error', 'message': f'Ollama service error: {str(e)}'}), 500
-    except AttributeError as e:
-        return jsonify({'status': 'error', 'message': f'Invalid response format: {str(e)}'}), 500
+        return jsonify({'status': 'error', 'message': f'Ollama service error: {str(e)}')}), 500
+    except (KeyError, ValueError, AttributeError) as e:
+        return jsonify({'status': 'error', 'message': f'Invalid response format: {str(e)}')}), 500
 
 @app.route('/trigger_event', methods=['POST'])
 def trigger_event():
@@ -147,7 +180,7 @@ def get_background_images():
         images = [f for f in os.listdir(images_dir) if os.path.isfile(os.path.join(images_dir, f))]
         return jsonify({'status': 'success', 'images': images}), 200
     except (OSError, IOError) as e:
-        return jsonify({'status': 'error', 'message': f'Error accessing images: {str(e)}'}), 500
+        return jsonify({'status': 'error', 'message': f'Error accessing images: {str(e)}')}), 500
 
 @app.route('/get_avatar_models', methods=['GET'])
 def get_avatar_models():
@@ -157,7 +190,7 @@ def get_avatar_models():
         models = [f for f in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, f))]
         return jsonify({'status': 'success', 'models': models}), 200
     except (OSError, IOError) as e:
-        return jsonify({'status': 'error', 'message': f'Error accessing models: {str(e)}'}), 500
+        return jsonify({'status': 'error', 'message': f'Error accessing models: {str(e)}')}), 500
 
 @socketio.on('trigger_event')
 def handle_trigger_event(data):

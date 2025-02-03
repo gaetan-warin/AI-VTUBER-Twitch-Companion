@@ -146,6 +146,15 @@ button:active {
     margin: 0 5px;
 }
 
+.button-group-inline {
+    display: flex;
+    gap: 10px;
+}
+
+.button-group-inline button {
+    flex: 1;
+}
+
 .question-display {
     position: fixed;
     top: 10px;
