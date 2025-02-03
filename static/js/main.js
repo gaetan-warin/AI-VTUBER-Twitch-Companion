@@ -279,6 +279,64 @@ function initializeSpeechRecognition() {
     };
 }
 
+let audioContext, audioInput, analyser;
+const waveCanvas = document.getElementById('waveCanvas');
+const microphoneAudio = document.getElementById('microphoneAudio');
+
+function initializeWaveVisualization() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error('Your browser does not support mediastream');
+        return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        .then(function onSuccess(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext)();
+            audioInput = audioContext.createMediaStreamSource(stream);
+            analyser = audioContext.createAnalyser();
+            audioInput.connect(analyser);
+
+            const binaryData = [stream];
+            microphoneAudio.src = window.URL.createObjectURL(new Blob(binaryData, { type: 'application/zip' }));
+            microphoneAudio.onloadedmetadata = function(e) { };
+
+            drawSpectrum(analyser);
+        })
+        .catch(function(e) {
+            console.error('Error accessing microphone:', e);
+        });
+}
+
+function drawSpectrum(analyser) {
+    const ctx = waveCanvas.getContext('2d');
+    const cwidth = waveCanvas.width;
+    const cheight = waveCanvas.height;
+    const meterWidth = 8;
+    const gap = 2;
+    const meterNum = cwidth / (meterWidth + gap);
+
+    const gradient = ctx.createLinearGradient(0, cheight, 0, 0);
+    gradient.addColorStop(1, '#a467af');
+    gradient.addColorStop(0.3, '#ff0');
+    gradient.addColorStop(0, '#f00');
+    ctx.fillStyle = gradient;
+
+    function drawMeter() {
+        const array = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(array);
+
+        const step = Math.round(array.length / meterNum);
+        ctx.clearRect(0, 0, cwidth, cheight);
+        for (let i = 0; i < meterNum; i++) {
+            const value = array[i * step];
+            ctx.fillRect(i * (meterWidth + gap), cheight, meterWidth, -value);
+        }
+        requestAnimationFrame(drawMeter);
+    }
+
+    requestAnimationFrame(drawMeter);
+}
+
 function startRecording() {
     if (!recognition) initializeSpeechRecognition();
     if (isSpeaking) {
@@ -287,9 +345,16 @@ function startRecording() {
         gsap.killTweensOf(mouthState);
         hideSpeechBubble();
     }
+
+    initializeWaveVisualization();
+
     recognition.start();
     isRecording = true;
     $('#startRecordingBtn').text('Stop Recording').addClass('recording');
+    
+    if ($('#waveToggle').is(':checked')) {
+        $('#waveCanvas').show();
+    }
     
     // Update microphone selection when starting recording
     navigator.mediaDevices.getUserMedia({ audio: true })
@@ -305,6 +370,12 @@ function stopRecording() {
         recognition.stop();
         isRecording = false;
         $('#startRecordingBtn').text('Start Recording').removeClass('recording');
+        $('#waveCanvas').hide();
+
+        if (audioContext) {
+            audioContext.close();
+            audioContext = null;
+        }
     }
 }
 
@@ -400,6 +471,16 @@ function setupEventListeners() {
         if (isRecording) {
             stopRecording();
             startRecording();
+        }
+    });
+
+    $('#waveToggle').on('change', function() {
+        if (isRecording) {
+            if ($(this).is(':checked')) {
+                $('#waveCanvas').show();
+            } else {
+                $('#waveCanvas').hide();
+            }
         }
     });
 }
@@ -555,4 +636,5 @@ $(document).ready(() => {
     setupEventListeners();
     socket.connect();
     initializeApp();
+    $('#waveCanvas').hide();
 });

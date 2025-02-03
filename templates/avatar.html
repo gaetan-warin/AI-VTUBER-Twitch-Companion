@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
+    <audio id="microphoneAudio" autoplay></audio>
     <canvas id="canvas"></canvas>
     <div id="speech-bubble" class="speech-bubble"></div>
     <div id="question-display" class="question-display" style="display: none;"></div>
@@ -66,6 +67,10 @@
                             <select id="preferredMicrophone"></select>
                         </div>
                         <button id="startRecordingBtn">Start Recording</button>
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="waveToggle" checked>
+                            <label for="waveToggle">Show Wave Animation</label>
+                        </div>
                     </div>
 
                     <div class="settings-section">
@@ -132,6 +137,10 @@
             </div>
             <button id="saveModalConfigBtn">ok</button>
         </div>
+    </div>
+
+    <div class="wrap">
+        <canvas id="waveCanvas" width="1000" height="100"></canvas>
     </div>
 
     <script src="static/js/main.js"></script>
