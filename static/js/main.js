@@ -1,5 +1,4 @@
 let modelPath = '';
-
 const synth = window.speechSynthesis;
 const mouthState = { value: 0 };
 let isSpeaking = false;
@@ -15,8 +14,8 @@ const socket = io({
 
 // Add this audio element to the body
 const celebrationAudio = new Audio('static/mp3/success.mp3');
-celebrationAudio.volume = 0.3; // Set volume to 30%
-celebrationAudio.preload = 'auto'; // Preload the audio
+celebrationAudio.volume = 0.3;
+celebrationAudio.preload = 'auto';
 
 // Initialize application
 function main(modelPath) {
@@ -26,7 +25,7 @@ function main(modelPath) {
     }
 
     const app = new PIXI.Application({
-        view: document.getElementById('canvas'),
+        view: $('#canvas')[0],
         autoStart: true,
         resizeTo: window,
         transparent: true,
@@ -92,23 +91,23 @@ synth.onvoiceschanged = () => {
 };
 
 function showSpeechBubble(text) {
-    const bubble = document.getElementById('speech-bubble');
-    bubble.textContent = text;
-    bubble.style.display = 'block';
+    const bubble = $('#speech-bubble');
+    bubble.text(text).show();
 
     if (currentModel) {
         const bounds = currentModel.getBounds();
         const x = window.innerWidth / 2;
         const y = (window.innerHeight / 2) - bounds.height / 2 - 50;
 
-        bubble.style.left = `${x - bubble.offsetWidth / 2}px`;
-        bubble.style.top = `${y}px`;
+        bubble.css({
+            left: `${x - bubble.outerWidth() / 2}px`,
+            top: `${y}px`
+        });
     }
 }
 
 function hideSpeechBubble() {
-    const bubble = document.getElementById('speech-bubble');
-    bubble.style.display = 'none';
+    $('#speech-bubble').hide();
 }
 
 function speak(text) {
@@ -208,321 +207,171 @@ function askAI(text) {
 }
 
 function setupEventListeners() {
-    const speakBtn = document.getElementById('speakBtn');
-    if (speakBtn) {
-        speakBtn.addEventListener('click', () => {
-            const inputField = document.getElementById('makeItSpeak');
-            const text = inputField ? inputField.value.trim() : '';
-            if (text) {
-                socket.emit('speak', { text });
-                inputField.value = ''; // Clear the input field
-            }
-        });
-    }
-
-    const askAIBtn = document.getElementById('askAIBtn');
-    if (askAIBtn) {
-        askAIBtn.addEventListener('click', () => {
-            const inputField = document.getElementById('makeItSpeak');
-            const text = inputField ? inputField.value.trim() : '';
-            if (text) {
-                askAI(text);
-                inputField.value = ''; // Clear the input field
-            }
-        });
-    }
-
-    const makeItSpeak = document.getElementById('makeItSpeak');
-    if (makeItSpeak) {
-        makeItSpeak.addEventListener('keydown', (event) => {
-            if (event.ctrlKey && event.key === 'Enter') {
-                const inputField = event.target;
-                const text = inputField ? inputField.value.trim() : '';
-                if (text) {
-                    socket.emit('speak', { text });
-                    inputField.value = ''; // Clear the input field
-                }
-            }
-        });
-    }
-
-    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-    if (toggleSidebarBtn) {
-        toggleSidebarBtn.addEventListener('click', () => {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('collapsed');
-            toggleSidebarBtn.textContent = sidebar.classList.contains('collapsed') ? 'Expand' : 'Collapse';
-            const toggleSidebarBtnCollapsed = document.getElementById('toggleSidebarBtnCollapsed');
-            if (toggleSidebarBtnCollapsed) {
-                toggleSidebarBtnCollapsed.style.display = sidebar.classList.contains('collapsed') ? 'block' : 'none';
-            }
-        });
-    }
-
-    const toggleSidebarBtnCollapsed = document.getElementById('toggleSidebarBtnCollapsed');
-    if (toggleSidebarBtnCollapsed) {
-        toggleSidebarBtnCollapsed.addEventListener('click', () => {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.remove('collapsed');
-            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-            if (toggleSidebarBtn) {
-                toggleSidebarBtn.textContent = 'Collapse';
-            }
-            toggleSidebarBtnCollapsed.style.display = 'none';
-        });
-    }
-
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', () => {
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
-            button.classList.add('active');
-            const tabContent = document.getElementById(button.dataset.tab);
-            if (tabContent) {
-                tabContent.style.display = 'block';
-            }
-        });
-    });
-
-    const saveConfigBtn = document.getElementById('saveConfigBtn');
-    if (saveConfigBtn) {
-        saveConfigBtn.addEventListener('click', () => {
-            const personaName = document.getElementById('personaName') ? document.getElementById('personaName').value.trim() : '';
-            const personaRole = document.getElementById('personaRole') ? document.getElementById('personaRole').value.trim() : '';
-            const channelName = document.getElementById('modalChannelName') ? document.getElementById('modalChannelName').value.trim() : '';
-            const token = document.getElementById('modalToken') ? document.getElementById('modalToken').value.trim() : '';
-            const clientId = document.getElementById('modalClientId') ? document.getElementById('modalClientId').value.trim() : '';
-            const extraDelayListener = document.getElementById('modalExtraDelayListener') ? document.getElementById('modalExtraDelayListener').value.trim() : '';
-            const nbSpamMessage = document.getElementById('modalNbSpamMessage') ? document.getElementById('modalNbSpamMessage').value.trim() : '';
-            const prePrompt = document.getElementById('prePrompt') ? document.getElementById('prePrompt').value.trim() : '';
-            const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
-            const avatarModel = document.getElementById('avatarModel') ? document.getElementById('avatarModel').value.trim() : '';
-            const backgroundImage = document.getElementById('backgroundImage') ? document.getElementById('backgroundImage').value.trim() : '';
-            const botNameFollowSub = document.getElementById('modalBotNameFollowSub') ? document.getElementById('modalBotNameFollowSub').value.trim() : '';
-            const keyWordFollow = document.getElementById('modalKeyWordFollow') ? document.getElementById('modalKeyWordFollow').value.trim() : '';
-            const keyWordSub = document.getElementById('modalKeyWordSub') ? document.getElementById('modalKeyWordSub').value.trim() : '';
-            const delimiterName = document.getElementById('modalDelimiterName') ? document.getElementById('modalDelimiterName').value.trim() : '';
-            const delimiterNameEnd = document.getElementById('modalDelimiterNameEnd') ? document.getElementById('modalDelimiterNameEnd').value.trim() : '';
-
-            // Save configuration to .env file
-            const config = {
-                PERSONA_NAME: personaName,
-                PERSONA_ROLE: personaRole,
-                PRE_PROMPT: prePrompt,
-                AVATAR_MODEL: avatarModel,
-                BACKGROUND_IMAGE: backgroundImage,
-                CHANNEL_NAME: channelName,
-                TOKEN: token,
-                CLIENT_ID: clientId,
-                EXTRA_DELAY_LISTENER: extraDelayListener,
-                NB_SPAM_MESSAGE: nbSpamMessage,
-                OLLAMA_MODEL: ollamaModel,
-                BOT_NAME_FOLLOW_SUB: botNameFollowSub,
-                KEY_WORD_FOLLOW: keyWordFollow,
-                KEY_WORD_SUB: keyWordSub,
-                DELIMITER_NAME: delimiterName,
-                DELIMITER_NAME_END: delimiterNameEnd
-            };
-            socket.emit('save_config', config);
-        });
-    }
-
-    const avatarModelSelect = document.getElementById('avatarModel');
-    const backgroundImageSelect = document.getElementById('backgroundImage');
-
-    // Populate avatar models
-    fetch('/get_avatar_models')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                data.models.forEach(model => {
-                    const option = document.createElement('option');
-                    option.value = model;
-                    option.textContent = model;
-                    avatarModelSelect.appendChild(option);
-                });
-            } else {
-                console.error('Failed to load avatar models:', data.message);
-            }
-        })
-        .catch(error => console.error('Error fetching avatar models:', error));
-
-    // Populate background images
-    fetch('/get_background_images')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                data.images.forEach(image => {
-                    const option = document.createElement('option');
-                    option.value = image;
-                    option.textContent = image;
-                    backgroundImageSelect.appendChild(option);
-                });
-
-                // Set the background image select value after options are populated
-                const backgroundImage = data.BACKGROUND_IMAGE || '';
-                if (backgroundImage) {
-                    backgroundImageSelect.value = backgroundImage;
-                    document.body.style.backgroundImage = `url('/static/images/background/${backgroundImage}')`;
-                    document.body.style.backgroundPosition = 'center';
-                    document.body.style.backgroundSize = 'cover';
-                }
-            } else {
-                console.error('Failed to load background images:', data.message);
-            }
-        })
-        .catch(error => console.error('Error fetching background images:', error));
-
-    // Update background image on change
-    if (backgroundImageSelect) {
-        backgroundImageSelect.addEventListener('change', function() {
-            const selectedImage = backgroundImageSelect.value;
-            document.body.style.backgroundImage = `url('/static/images/background/${selectedImage}')`;
-            document.body.style.backgroundPosition = 'center';
-            document.body.style.backgroundSize = 'cover';
-        });
-    }
-
-    // Load new avatar model on change
-    if (avatarModelSelect) {
-        avatarModelSelect.addEventListener('change', function() {
-            const selectedModel = avatarModelSelect.value;
-            let modelPath;
-            if (selectedModel === 'mao_pro') {
-                modelPath = `models/${selectedModel}/mao_pro.model3.json`;
-            } else if (selectedModel === 'haru') {
-                modelPath = `models/${selectedModel}/haru_greeter_t03.model3.json`;
-            } else {
-                modelPath = `models/${selectedModel}/${selectedModel}.model.json`;
-            }
-            loadAvatarModel(modelPath);
-        });
-    }
-
-    const tokenField = document.getElementById('token');
-    if (tokenField) {
-        tokenField.classList.add('blurry');
-
-        tokenField.addEventListener('focus', () => {
-            tokenField.classList.remove('blurry');
-        });
-
-        tokenField.addEventListener('blur', () => {
-            tokenField.classList.add('blurry');
-        });
-    }
-
-    const clientIdField = document.getElementById('clientId');
-    if (clientIdField) {
-        clientIdField.classList.add('blurry');
-
-        clientIdField.addEventListener('focus', () => {
-            clientIdField.classList.remove('blurry');
-        });
-
-        clientIdField.addEventListener('blur', () => {
-            clientIdField.classList.add('blurry');
-        });
-    }
-
-    const configBtn = document.getElementById('configBtn');
-    if (configBtn) {
-        configBtn.addEventListener('click', () => {
-            const modal = document.getElementById('configModal');
-            modal.style.display = 'block';
-        });
-    }
-
-    const closeModalBtn = document.querySelector('.close');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', () => {
-            const modal = document.getElementById('configModal');
-            modal.style.display = 'none';
-        });
-    }
-
-    window.addEventListener('click', (event) => {
-        const modal = document.getElementById('configModal');
-        if (event.target === modal) {
-            modal.style.display = 'none';
+    $('#speakBtn, #askAIBtn').on('click', function() {
+        const text = $('#makeItSpeak').val().trim();
+        if (text) {
+            socket.emit(this.id === 'speakBtn' ? 'speak' : 'ask_ai', { text });
+            $('#makeItSpeak').val('');
         }
     });
 
-    const saveModalConfigBtn = document.getElementById('saveModalConfigBtn');
-    if (saveModalConfigBtn) {
-        saveModalConfigBtn.addEventListener('click', () => {
-            const extraDelayListener = document.getElementById('modalExtraDelayListener') ? document.getElementById('modalExtraDelayListener').value.trim() : '';
-            const nbSpamMessage = document.getElementById('modalNbSpamMessage') ? document.getElementById('modalNbSpamMessage').value.trim() : '';
-            const botNameFollowSub = document.getElementById('modalBotNameFollowSub') ? document.getElementById('modalBotNameFollowSub').value.trim() : '';
-            const keyWordFollow = document.getElementById('modalKeyWordFollow') ? document.getElementById('modalKeyWordFollow').value.trim() : '';
-            const keyWordSub = document.getElementById('modalKeyWordSub') ? document.getElementById('modalKeyWordSub').value.trim() : '';
-            const delimiterName = document.getElementById('modalDelimiterName') ? document.getElementById('modalDelimiterName').value.trim() : '';
-            const delimiterNameEnd = document.getElementById('modalDelimiterNameEnd') ? document.getElementById('modalDelimiterNameEnd').value.trim() : '';
-            const channelName = document.getElementById('modalChannelName') ? document.getElementById('modalChannelName').value.trim() : '';
-            const token = document.getElementById('modalToken') ? document.getElementById('modalToken').value.trim() : '';
-            const clientId = document.getElementById('modalClientId') ? document.getElementById('modalClientId').value.trim() : '';
+    $('#makeItSpeak').on('keydown', (event) => {
+        if (event.ctrlKey && event.key === 'Enter') {
+            const text = $(event.target).val().trim();
+            if (text) {
+                socket.emit('speak', { text });
+                $(event.target).val('');
+            }
+        }
+    });
 
-            // Update the main configuration fields
-            if (document.getElementById('extraDelayListener')) document.getElementById('extraDelayListener').value = extraDelayListener;
-            if (document.getElementById('nbSpamMessage')) document.getElementById('nbSpamMessage').value = nbSpamMessage;
-            if (document.getElementById('botNameFollowSub')) document.getElementById('botNameFollowSub').value = botNameFollowSub;
-            if (document.getElementById('keyWordFollow')) document.getElementById('keyWordFollow').value = keyWordFollow;
-            if (document.getElementById('keyWordSub')) document.getElementById('keyWordSub').value = keyWordSub;
-            if (document.getElementById('delimiterName')) document.getElementById('delimiterName').value = delimiterName;
-            if (document.getElementById('delimiterNameEnd')) document.getElementById('delimiterNameEnd').value = delimiterNameEnd;
-            if (document.getElementById('channelName')) document.getElementById('channelName').value = channelName;
-            if (document.getElementById('token')) document.getElementById('token').value = token;
-            if (document.getElementById('clientId')) document.getElementById('clientId').value = clientId;
+    $('#toggleSidebarBtn').on('click', () => {
+        const sidebar = $('#sidebar');
+        sidebar.toggleClass('collapsed');
+        $('#toggleSidebarBtn').text(sidebar.hasClass('collapsed') ? 'Expand' : 'Collapse');
+        $('#toggleSidebarBtnCollapsed').toggle(sidebar.hasClass('collapsed'));
+    });
 
-            // Save configuration to .env file
-            const config = {
-                EXTRA_DELAY_LISTENER: extraDelayListener,
-                NB_SPAM_MESSAGE: nbSpamMessage,
-                BOT_NAME_FOLLOW_SUB: botNameFollowSub,
-                KEY_WORD_FOLLOW: keyWordFollow,
-                KEY_WORD_SUB: keyWordSub,
-                DELIMITER_NAME: delimiterName,
-                DELIMITER_NAME_END: delimiterNameEnd,
-                CHANNEL_NAME: channelName,
-                TOKEN: token,
-                CLIENT_ID: clientId
-            };
-            socket.emit('save_config', config);
+    $('#toggleSidebarBtnCollapsed').on('click', () => {
+        $('#sidebar').removeClass('collapsed');
+        $('#toggleSidebarBtn').text('Collapse');
+        $('#toggleSidebarBtnCollapsed').hide();
+    });
 
-            // Close the modal
-            const modal = document.getElementById('configModal');
-            modal.style.display = 'none';
+    $('.tab-button').on('click', function() {
+        $('.tab-button').removeClass('active');
+        $('.tab-content').hide();
+        $(this).addClass('active');
+        $('#' + $(this).data('tab')).show();
+    });
+
+    $('#saveConfigBtn').on('click', saveConfig);
+
+    const avatarModelSelect = $('#avatarModel');
+    const backgroundImageSelect = $('#backgroundImage');
+
+    populateSelect('/get_avatar_models', avatarModelSelect);
+    populateSelect('/get_background_images', backgroundImageSelect, (data) => {
+        const backgroundImage = data.BACKGROUND_IMAGE || '';
+        if (backgroundImage) {
+            backgroundImageSelect.val(backgroundImage);
+            $('body').css({
+                backgroundImage: `url('/static/images/background/${backgroundImage}')`,
+                backgroundPosition: 'center',
+                backgroundSize: 'cover'
+            });
+        }
+    });
+
+    backgroundImageSelect.on('change', function() {
+        const selectedImage = $(this).val();
+        $('body').css({
+            backgroundImage: `url('/static/images/background/${selectedImage}')`,
+            backgroundPosition: 'center',
+            backgroundSize: 'cover'
         });
-    }
+    });
+
+    avatarModelSelect.on('change', function() {
+        const selectedModel = $(this).val();
+        const modelPath = selectedModel === 'mao_pro' ? `models/${selectedModel}/mao_pro.model3.json` :
+                          selectedModel === 'haru' ? `models/${selectedModel}/haru_greeter_t03.model3.json` :
+                          `models/${selectedModel}/${selectedModel}.model.json`;
+        loadAvatarModel(modelPath);
+    });
+
+    $('#token, #clientId').addClass('blurry').on('focus', function() {
+        $(this).removeClass('blurry');
+    }).on('blur', function() {
+        $(this).addClass('blurry');
+    });
+
+    $('#configBtn').on('click', () => {
+        $('#configModal').show();
+    });
+
+    $('.close').on('click', () => {
+        $('#configModal').hide();
+    });
+
+    $(window).on('click', (event) => {
+        if (event.target === $('#configModal')[0]) {
+            $('#configModal').hide();
+        }
+    });
+
+    $('#saveModalConfigBtn').on('click', saveModalConfig);
+}
+
+function saveConfig() {
+    const config = getConfigValues([
+        'personaName', 'personaRole', 'prePrompt', 'avatarModel', 'backgroundImage',
+        'channelName', 'token', 'clientId', 'extraDelayListener',
+        'nbSpamMessage', 'ollamaModel', 'botNameFollowSub', 'keyWordFollow',
+        'keyWordSub', 'delimiterName', 'delimiterNameEnd'
+    ]);
+    console.log("save config:", config);
+    socket.emit('save_config', config);
+}
+
+function saveModalConfig() {
+    const config = getConfigValues([
+        'extraDelayListener', 'nbSpamMessage', 'botNameFollowSub',
+        'keyWordFollow', 'keyWordSub', 'delimiterName', 'delimiterNameEnd',
+        'channelName', 'token', 'clientId'
+    ]);
+
+    Object.keys(config).forEach(key => {
+        $(`#${key}`).val(config[key]);
+    });
+
+    socket.emit('save_config', config);
+    $('#configModal').hide();
+}
+
+function camelToSnakeCase(str) {
+    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+}
+
+function getConfigValues(fields) {
+    const config = {};
+    fields.forEach(field => {
+        const snakeField = camelToSnakeCase(field);
+        config[snakeField.toUpperCase()] = $(`#${field}`).val().trim();
+    });
+    return config;
 }
 
 function showQuestionDisplay(text) {
-    const questionDisplay = document.getElementById('question-display');
-    questionDisplay.textContent = text;
-    questionDisplay.style.display = 'block';
-    clearTimeout(questionDisplay.hideTimeout);
-    questionDisplay.hideTimeout = setTimeout(() => {
-        questionDisplay.style.display = 'none';
-    }, 10000);
+    const questionDisplay = $('#question-display');
+    questionDisplay.text(text).show();
+    clearTimeout(questionDisplay.data('hideTimeout'));
+    questionDisplay.data('hideTimeout', setTimeout(() => {
+        questionDisplay.hide();
+    }, 10000));
+}
+
+function populateSelect(url, selectElement, callback) {
+    $.getJSON(url, (data) => {
+        if (data.status === 'success' && Array.isArray(data.models)) {
+            data.models.forEach(model => {
+                selectElement.append(new Option(model, model));
+            });
+            if (callback) callback(data);
+        } else if (data.status === 'success' && Array.isArray(data.images)) {
+            // Handle background images separately
+            data.images.forEach(image => {
+                selectElement.append(new Option(image, image));
+            });
+            if (callback) callback(data);
+        } else {
+            console.error(`Failed to load data from ${url}:`, data.message || 'Unexpected data format');
+        }
+    }).fail((error) => console.error(`Error fetching data from ${url}:`, error));
 }
 
 function populateOllamaModels() {
-    fetch('/get_ollama_models')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const select = document.getElementById('ollamaModel');
-                data.models.forEach(model => {
-                    const option = document.createElement('option');
-                    option.value = model;
-                    option.textContent = model;
-                    select.appendChild(option);
-                });
-            } else {
-                console.error('Failed to load Ollama models:', data.message);
-            }
-        })
-        .catch(error => console.error('Error fetching Ollama models:', error));
+    populateSelect('/get_ollama_models', $('#ollamaModel'));
 }
 
 function triggerFireworks() {
@@ -577,18 +426,10 @@ function triggerFireworks() {
 }
 
 function showNotification(type, message) {
-    const notification = document.getElementById('notification');
-    notification.textContent = message;
-    notification.className = `notification ${type}`;
-
-    // Show notification
+    const notification = $('#notification');
+    notification.text(message).attr('class', `notification ${type}`).addClass('show');
     setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
-
-    // Hide notification after 3 seconds
-    setTimeout(() => {
-        notification.classList.remove('show');
+        notification.removeClass('show');
     }, 3000);
 }
 
@@ -606,22 +447,22 @@ socket.on('connect', () => console.log('WebSocket connected:', socket.id));
 socket.on('disconnect', () => console.log('WebSocket disconnected'));
 
 socket.on('load_config', data => {
-    if (data.PERSONA_NAME) document.getElementById('personaName').value = data.PERSONA_NAME;
-    if (data.PERSONA_ROLE) document.getElementById('personaRole').value = data.PERSONA_ROLE;
-    if (data.PRE_PROMPT) document.getElementById('prePrompt').value = data.PRE_PROMPT;
-    if (data.AVATAR_MODEL) document.getElementById('avatarModel').value = data.AVATAR_MODEL;
-    if (data.OLLAMA_MODEL) document.getElementById('ollamaModel').value = data.OLLAMA_MODEL;
-    if (data.CHANNEL_NAME) document.getElementById('modalChannelName').value = data.CHANNEL_NAME;
-    if (data.TOKEN) document.getElementById('modalToken').value = data.TOKEN;
-    if (data.CLIENT_ID) document.getElementById('modalClientId').value = data.CLIENT_ID;
-    if (data.EXTRA_DELAY_LISTENER) document.getElementById('modalExtraDelayListener').value = data.EXTRA_DELAY_LISTENER;
-    if (data.NB_SPAM_MESSAGE) document.getElementById('modalNbSpamMessage').value = data.NB_SPAM_MESSAGE;
-    if (data.BOT_NAME_FOLLOW_SUB) document.getElementById('modalBotNameFollowSub').value = data.BOT_NAME_FOLLOW_SUB;
-    if (data.KEY_WORD_FOLLOW) document.getElementById('modalKeyWordFollow').value = data.KEY_WORD_FOLLOW;
-    if (data.KEY_WORD_SUB) document.getElementById('modalKeyWordSub').value = data.KEY_WORD_SUB;
-    if (data.DELIMITER_NAME) document.getElementById('modalDelimiterName').value = data.DELIMITER_NAME;
-    if (data.DELIMITER_NAME_END) document.getElementById('modalDelimiterNameEnd').value = data.DELIMITER_NAME_END;
-    if (data.BACKGROUND_IMAGE) document.getElementById('backgroundImage').value = data.BACKGROUND_IMAGE;
+    if (data.PERSONA_NAME) $('#personaName').val(data.PERSONA_NAME);
+    if (data.PERSONA_ROLE) $('#personaRole').val(data.PERSONA_ROLE);
+    if (data.PRE_PROMPT) $('#prePrompt').val(data.PRE_PROMPT);
+    if (data.AVATAR_MODEL) $('#avatarModel').val(data.AVATAR_MODEL);
+    if (data.OLLAMA_MODEL) $('#ollamaModel').val(data.OLLAMA_MODEL);
+    if (data.CHANNEL_NAME) $('#channelName').val(data.CHANNEL_NAME);
+    if (data.TOKEN) $('#token').val(data.TOKEN);
+    if (data.CLIENT_ID) $('#clientId').val(data.CLIENT_ID);
+    if (data.EXTRA_DELAY_LISTENER) $('#extraDelayListener').val(data.EXTRA_DELAY_LISTENER);
+    if (data.NB_SPAM_MESSAGE) $('#nbSpamMessage').val(data.NB_SPAM_MESSAGE);
+    if (data.BOT_NAME_FOLLOW_SUB) $('#botNameFollowSub').val(data.BOT_NAME_FOLLOW_SUB);
+    if (data.KEY_WORD_FOLLOW) $('#keyWordFollow').val(data.KEY_WORD_FOLLOW);
+    if (data.KEY_WORD_SUB) $('#keyWordSub').val(data.KEY_WORD_SUB);
+    if (data.DELIMITER_NAME) $('#delimiterName').val(data.DELIMITER_NAME);
+    if (data.DELIMITER_NAME_END) $('#delimiterNameEnd').val(data.DELIMITER_NAME_END);
+    if (data.BACKGROUND_IMAGE) $('#backgroundImage').val(data.BACKGROUND_IMAGE);
 
     if (data.AVATAR_MODEL) {
         let modelPath;
@@ -636,9 +477,11 @@ socket.on('load_config', data => {
     }
 
     if (data.BACKGROUND_IMAGE) {
-        document.body.style.backgroundImage = `url('/static/images/background/${data.BACKGROUND_IMAGE}')`;
-        document.body.style.backgroundPosition = 'center';
-        document.body.style.backgroundSize = 'cover';
+        $('body').css({
+            backgroundImage: `url('/static/images/background/${data.BACKGROUND_IMAGE}')`,
+            backgroundPosition: 'center',
+            backgroundSize: 'cover'
+        });
     }
 });
 
@@ -651,26 +494,26 @@ socket.on('save_config_response', function(response) {
 });
 
 function applyConfig(config) {
-    document.getElementById('avatarModel').value = config.AVATAR_MODEL || '';
-    document.getElementById('personaName').value = config.PERSONA_NAME || '';
-    document.getElementById('personaRole').value = config.PERSONA_ROLE || '';
-    document.getElementById('prePrompt').value = config.PRE_PROMPT || '';
-    document.getElementById('backgroundImage').value = config.BACKGROUND_IMAGE || '';
+    const fields = [
+        'AVATAR_MODEL', 'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'BACKGROUND_IMAGE'
+    ];
+
+    fields.forEach(field => {
+        $(`#${field.toLowerCase()}`).val(config[field] || '');
+    });
 
     if (config.BACKGROUND_IMAGE) {
-        document.body.style.backgroundImage = `url('/static/images/background/${config.BACKGROUND_IMAGE}')`;
-        document.body.style.backgroundPosition = 'center';
-        document.body.style.backgroundSize = 'cover';
+        $('body').css({
+            backgroundImage: `url('/static/images/background/${config.BACKGROUND_IMAGE}')`,
+            backgroundPosition: 'center',
+            backgroundSize: 'cover'
+        });
     }
 
     if (config.AVATAR_MODEL) {
-        if (config.AVATAR_MODEL === 'mao_pro') {
-            modelPath = `models/${config.AVATAR_MODEL}/mao_pro.model3.json`;
-        } else if (config.AVATAR_MODEL === 'haru') {
-            modelPath = `models/${config.AVATAR_MODEL}/haru_greeter_t03.model3.json`;
-        } else {
-            modelPath = `models/${config.AVATAR_MODEL}/${config.AVATAR_MODEL}.model.json`;
-        }
+        const modelPath = config.AVATAR_MODEL === 'mao_pro' ? `models/${config.AVATAR_MODEL}/mao_pro.model3.json` :
+                          config.AVATAR_MODEL === 'haru' ? `models/${config.AVATAR_MODEL}/haru_greeter_t03.model3.json` :
+                          `models/${config.AVATAR_MODEL}/${config.AVATAR_MODEL}.model.json`;
         loadAvatarModel(modelPath);
     }
 }
@@ -681,49 +524,43 @@ socket.on('load_config', config => {
 });
 
 function updateListenerStatus(status) {
-    const statusText = document.getElementById('listenerStatusText');
-    statusText.textContent = status ? 'Running' : 'Stopped';
-    statusText.style.color = status ? 'green' : 'red';
+    const statusText = $('#listenerStatusText');
+    statusText.text(status ? 'Running' : 'Stopped');
+    statusText.css('color', status ? 'green' : 'red');
 }
 
 function checkListenerStatus() {
-    fetch('/listener_status')
-        .then(response => response.json())
-        .then(data => {
-            updateListenerStatus(data.status === 'running');
-        });
+    $.getJSON('/listener_status', (data) => {
+        updateListenerStatus(data.status === 'running');
+    });
 }
 
-document.getElementById('startListenerBtn').addEventListener('click', () => {
-    fetch('/start_listener', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                updateListenerStatus(true);
-            } else {
-                alert('Failed to start listener: ' + data.message);
-            }
-        });
+$('#startListenerBtn').on('click', () => {
+    $.post('/start_listener', (data) => {
+        if (data.status === 'success') {
+            updateListenerStatus(true);
+        } else {
+            alert('Failed to start listener: ' + data.message);
+        }
+    });
 });
 
-document.getElementById('stopListenerBtn').addEventListener('click', () => {
-    fetch('/stop_listener', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                updateListenerStatus(false);
-            } else {
-                alert('Failed to stop listener: ' + data.message);
-            }
-        });
+$('#stopListenerBtn').on('click', () => {
+    $.post('/stop_listener', (data) => {
+        if (data.status === 'success') {
+            updateListenerStatus(false);
+        } else {
+            alert('Failed to stop listener: ' + data.message);
+        }
+    });
 });
 
 // Initial setup
-document.addEventListener('DOMContentLoaded', () => {
+$(document).ready(() => {
     setupEventListeners();
     socket.connect();
     socket.emit('request_model_path');
     populateOllamaModels();
     socket.emit('load_config');
-    checkListenerStatus(); // Check listener status on page load
+    checkListenerStatus();
 });

@@ -6,6 +6,7 @@
     <title>AI CHAT BOT</title>
     <link rel="icon" href="static/favicon.ico" type="image/x-icon">
 
+    <script src="static/js/jquery-3.7.1.min.js"></script>
     <script src="static/js/live2dcubismcore.min.js"></script>
     <script src="static/js/live2d.min.js"></script>
     <script src="static/js/pixi.min.js"></script>
@@ -14,7 +15,6 @@
     <script src="static/js/gsap.min.js"></script>
     <script src="static/js/socket.io.min.js"></script>
     <script src="static/js/confetti.browser.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.5.0-beta/dist/index.min.js"></script>
     <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
@@ -94,32 +94,32 @@
             <h2>Edit Configuration</h2>
             <div class="settings-section">
                 <h3>Bot Behavior</h3>
-                <label for="modalExtraDelayListener">Extra Delay Listener:</label>
-                <input type="number" id="modalExtraDelayListener" value="3" step="0.5">
-                <label for="modalNbSpamMessage">Spam Time Window:</label>
-                <input type="number" id="modalNbSpamMessage" value="3" step="0.5">
+                <label for="extraDelayListener">Extra Delay Listener:</label>
+                <input type="number" id="extraDelayListener" value="3" step="0.5">
+                <label for="nbSpamMessage">Spam Time Window:</label>
+                <input type="number" id="nbSpamMessage" value="3" step="0.5">
             </div>
             <div class="settings-section">
                 <h3>Follow/Sub Settings</h3>
-                <label for="modalBotNameFollowSub">Follow/Sub Bot Name:</label>
-                <input type="text" id="modalBotNameFollowSub" value="wizebot">
-                <label for="modalKeyWordFollow">Follow Keyword:</label>
-                <input type="text" id="modalKeyWordFollow" value="New FOLLOW(S)">
-                <label for="modalKeyWordSub">Sub Keyword:</label>
-                <input type="text" id="modalKeyWordSub" value="NEW SUB">
-                <label for="modalDelimiterName">Name Delimiter Start:</label>
-                <input type="text" id="modalDelimiterName" value="{">
-                <label for="modalDelimiterNameEnd">Name Delimiter End:</label>
-                <input type="text" id="modalDelimiterNameEnd" value="}">
+                <label for="botNameFollowSub">Follow/Sub Bot Name:</label>
+                <input type="text" id="botNameFollowSub" value="wizebot">
+                <label for="keyWordFollow">Follow Keyword:</label>
+                <input type="text" id="keyWordFollow" value="New FOLLOW(S)">
+                <label for="keyWordSub">Sub Keyword:</label>
+                <input type="text" id="keyWordSub" value="NEW SUB">
+                <label for="delimiterName">Name Delimiter Start:</label>
+                <input type="text" id="delimiterName" value="{">
+                <label for="delimiterNameEnd">Name Delimiter End:</label>
+                <input type="text" id="delimiterNameEnd" value="}">
             </div>
             <div class="settings-section">
                 <h3>Twitch Connection</h3>
-                <label for="modalChannelName">Channel Name:</label>
-                <input type="text" id="modalChannelName" value="ai_chat_bot">
-                <label for="modalToken">Twitch Token:</label>
-                <input type="text" id="modalToken" class="blurry" value="jfitp4b4e94wdl6t087qesvacbr0ad">
-                <label for="modalClientId">Twitch Client ID:</label>
-                <input type="text" id="modalClientId" class="blurry" value="gp762nuuoqcoxypju8c569th9wz7q5">
+                <label for="channelName">Channel Name:</label>
+                <input type="text" id="channelName" value="ai_chat_bot">
+                <label for="token">Twitch Token:</label>
+                <input type="text" id="token" class="blurry" value="jfitp4b4e94wdl6t087qesvacbr0ad">
+                <label for="clientId">Twitch Client ID:</label>
+                <input type="text" id="clientId" class="blurry" value="gp762nuuoqcoxypju8c569th9wz7q5">
             </div>
             <button id="saveModalConfigBtn">ok</button>
         </div>
