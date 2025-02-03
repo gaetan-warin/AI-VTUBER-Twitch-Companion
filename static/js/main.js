@@ -208,97 +208,124 @@ function askAI(text) {
 }
 
 function setupEventListeners() {
-    document.getElementById('speakBtn').addEventListener('click', () => {
-        const inputField = document.getElementById('makeItSpeak');
-        const text = inputField.value.trim();
-        if (text) {
-            socket.emit('speak', { text });
-            inputField.value = ''; // Clear the input field
-        }
-    });
-
-    document.getElementById('askAIBtn').addEventListener('click', () => {
-        const inputField = document.getElementById('makeItSpeak');
-        const text = inputField.value.trim();
-        if (text) {
-            askAI(text);
-            inputField.value = ''; // Clear the input field
-        }
-    });
-
-    document.getElementById('makeItSpeak').addEventListener('keydown', (event) => {
-        if (event.ctrlKey && event.key === 'Enter') {
-            const inputField = event.target;
-            const text = inputField.value.trim();
+    const speakBtn = document.getElementById('speakBtn');
+    if (speakBtn) {
+        speakBtn.addEventListener('click', () => {
+            const inputField = document.getElementById('makeItSpeak');
+            const text = inputField ? inputField.value.trim() : '';
             if (text) {
                 socket.emit('speak', { text });
                 inputField.value = ''; // Clear the input field
             }
-        }
-    });
+        });
+    }
 
-    document.getElementById('toggleSidebarBtn').addEventListener('click', () => {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('collapsed');
-        document.getElementById('toggleSidebarBtn').textContent = sidebar.classList.contains('collapsed') ? 'Expand' : 'Collapse';
-        document.getElementById('toggleSidebarBtnCollapsed').style.display = sidebar.classList.contains('collapsed') ? 'block' : 'none';
-    });
+    const askAIBtn = document.getElementById('askAIBtn');
+    if (askAIBtn) {
+        askAIBtn.addEventListener('click', () => {
+            const inputField = document.getElementById('makeItSpeak');
+            const text = inputField ? inputField.value.trim() : '';
+            if (text) {
+                askAI(text);
+                inputField.value = ''; // Clear the input field
+            }
+        });
+    }
 
-    document.getElementById('toggleSidebarBtnCollapsed').addEventListener('click', () => {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.remove('collapsed');
-        document.getElementById('toggleSidebarBtn').textContent = 'Collapse';
-        document.getElementById('toggleSidebarBtnCollapsed').style.display = 'none';
-    });
+    const makeItSpeak = document.getElementById('makeItSpeak');
+    if (makeItSpeak) {
+        makeItSpeak.addEventListener('keydown', (event) => {
+            if (event.ctrlKey && event.key === 'Enter') {
+                const inputField = event.target;
+                const text = inputField ? inputField.value.trim() : '';
+                if (text) {
+                    socket.emit('speak', { text });
+                    inputField.value = ''; // Clear the input field
+                }
+            }
+        });
+    }
+
+    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+    if (toggleSidebarBtn) {
+        toggleSidebarBtn.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            toggleSidebarBtn.textContent = sidebar.classList.contains('collapsed') ? 'Expand' : 'Collapse';
+            const toggleSidebarBtnCollapsed = document.getElementById('toggleSidebarBtnCollapsed');
+            if (toggleSidebarBtnCollapsed) {
+                toggleSidebarBtnCollapsed.style.display = sidebar.classList.contains('collapsed') ? 'block' : 'none';
+            }
+        });
+    }
+
+    const toggleSidebarBtnCollapsed = document.getElementById('toggleSidebarBtnCollapsed');
+    if (toggleSidebarBtnCollapsed) {
+        toggleSidebarBtnCollapsed.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('collapsed');
+            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+            if (toggleSidebarBtn) {
+                toggleSidebarBtn.textContent = 'Collapse';
+            }
+            toggleSidebarBtnCollapsed.style.display = 'none';
+        });
+    }
 
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', () => {
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
             button.classList.add('active');
-            document.getElementById(button.dataset.tab).style.display = 'block';
+            const tabContent = document.getElementById(button.dataset.tab);
+            if (tabContent) {
+                tabContent.style.display = 'block';
+            }
         });
     });
 
-    document.getElementById('saveConfigBtn').addEventListener('click', () => {
-        const personaName = document.getElementById('personaName').value.trim();
-        const personaRole = document.getElementById('personaRole').value.trim();
-        const channelName = document.getElementById('channelName').value.trim();
-        const token = document.getElementById('token').value.trim();
-        const clientId = document.getElementById('clientId').value.trim();
-        const extraDelayListener = document.getElementById('extraDelayListener').value.trim();
-        const nbSpamMessage = document.getElementById('nbSpamMessage').value.trim();
-        const prePrompt = document.getElementById('prePrompt').value.trim();
-        const ollamaModel = document.getElementById('ollamaModel').value.trim();
-        const avatarModel = document.getElementById('avatarModel').value.trim();
-        const backgroundImage = document.getElementById('backgroundImage').value.trim();
-        const botNameFollowSub = document.getElementById('botNameFollowSub').value.trim();
-        const keyWordFollow = document.getElementById('keyWordFollow').value.trim();
-        const keyWordSub = document.getElementById('keyWordSub').value.trim();
-        const delimiterName = document.getElementById('delimiterName').value.trim();
-        const delimiterNameEnd = document.getElementById('delimiterNameEnd').value.trim();
+    const saveConfigBtn = document.getElementById('saveConfigBtn');
+    if (saveConfigBtn) {
+        saveConfigBtn.addEventListener('click', () => {
+            const personaName = document.getElementById('personaName') ? document.getElementById('personaName').value.trim() : '';
+            const personaRole = document.getElementById('personaRole') ? document.getElementById('personaRole').value.trim() : '';
+            const channelName = document.getElementById('modalChannelName') ? document.getElementById('modalChannelName').value.trim() : '';
+            const token = document.getElementById('modalToken') ? document.getElementById('modalToken').value.trim() : '';
+            const clientId = document.getElementById('modalClientId') ? document.getElementById('modalClientId').value.trim() : '';
+            const extraDelayListener = document.getElementById('modalExtraDelayListener') ? document.getElementById('modalExtraDelayListener').value.trim() : '';
+            const nbSpamMessage = document.getElementById('modalNbSpamMessage') ? document.getElementById('modalNbSpamMessage').value.trim() : '';
+            const prePrompt = document.getElementById('prePrompt') ? document.getElementById('prePrompt').value.trim() : '';
+            const ollamaModel = document.getElementById('ollamaModel') ? document.getElementById('ollamaModel').value.trim() : '';
+            const avatarModel = document.getElementById('avatarModel') ? document.getElementById('avatarModel').value.trim() : '';
+            const backgroundImage = document.getElementById('backgroundImage') ? document.getElementById('backgroundImage').value.trim() : '';
+            const botNameFollowSub = document.getElementById('modalBotNameFollowSub') ? document.getElementById('modalBotNameFollowSub').value.trim() : '';
+            const keyWordFollow = document.getElementById('modalKeyWordFollow') ? document.getElementById('modalKeyWordFollow').value.trim() : '';
+            const keyWordSub = document.getElementById('modalKeyWordSub') ? document.getElementById('modalKeyWordSub').value.trim() : '';
+            const delimiterName = document.getElementById('modalDelimiterName') ? document.getElementById('modalDelimiterName').value.trim() : '';
+            const delimiterNameEnd = document.getElementById('modalDelimiterNameEnd') ? document.getElementById('modalDelimiterNameEnd').value.trim() : '';
 
-        // Save configuration to .env file
-        const config = {
-            PERSONA_NAME: personaName,
-            PERSONA_ROLE: personaRole,
-            PRE_PROMPT: prePrompt,
-            AVATAR_MODEL: avatarModel,
-            BACKGROUND_IMAGE: backgroundImage,
-            CHANNEL_NAME: channelName,
-            TOKEN: token,
-            CLIENT_ID: clientId,
-            EXTRA_DELAY_LISTENER: extraDelayListener,
-            NB_SPAM_MESSAGE: nbSpamMessage,
-            OLLAMA_MODEL: ollamaModel,
-            BOT_NAME_FOLLOW_SUB: botNameFollowSub,
-            KEY_WORD_FOLLOW: keyWordFollow,
-            KEY_WORD_SUB: keyWordSub,
-            DELIMITER_NAME: delimiterName,
-            DELIMITER_NAME_END: delimiterNameEnd
-        };
-        socket.emit('save_config', config);
-    });
+            // Save configuration to .env file
+            const config = {
+                PERSONA_NAME: personaName,
+                PERSONA_ROLE: personaRole,
+                PRE_PROMPT: prePrompt,
+                AVATAR_MODEL: avatarModel,
+                BACKGROUND_IMAGE: backgroundImage,
+                CHANNEL_NAME: channelName,
+                TOKEN: token,
+                CLIENT_ID: clientId,
+                EXTRA_DELAY_LISTENER: extraDelayListener,
+                NB_SPAM_MESSAGE: nbSpamMessage,
+                OLLAMA_MODEL: ollamaModel,
+                BOT_NAME_FOLLOW_SUB: botNameFollowSub,
+                KEY_WORD_FOLLOW: keyWordFollow,
+                KEY_WORD_SUB: keyWordSub,
+                DELIMITER_NAME: delimiterName,
+                DELIMITER_NAME_END: delimiterNameEnd
+            };
+            socket.emit('save_config', config);
+        });
+    }
 
     const avatarModelSelect = document.getElementById('avatarModel');
     const backgroundImageSelect = document.getElementById('backgroundImage');
@@ -347,48 +374,126 @@ function setupEventListeners() {
         .catch(error => console.error('Error fetching background images:', error));
 
     // Update background image on change
-    backgroundImageSelect.addEventListener('change', function() {
-        const selectedImage = backgroundImageSelect.value;
-        document.body.style.backgroundImage = `url('/static/images/background/${selectedImage}')`;
-        document.body.style.backgroundPosition = 'center';
-        document.body.style.backgroundSize = 'cover';
-    });
+    if (backgroundImageSelect) {
+        backgroundImageSelect.addEventListener('change', function() {
+            const selectedImage = backgroundImageSelect.value;
+            document.body.style.backgroundImage = `url('/static/images/background/${selectedImage}')`;
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundSize = 'cover';
+        });
+    }
 
     // Load new avatar model on change
-    avatarModelSelect.addEventListener('change', function() {
-        const selectedModel = avatarModelSelect.value;
-        let modelPath;
-        if (selectedModel === 'mao_pro') {
-            modelPath = `models/${selectedModel}/mao_pro.model3.json`;
-        } else if (selectedModel === 'haru') {
-            modelPath = `models/${selectedModel}/haru_greeter_t03.model3.json`;
-        } else {
-            modelPath = `models/${selectedModel}/${selectedModel}.model.json`;
-        }
-        loadAvatarModel(modelPath);
-    });
+    if (avatarModelSelect) {
+        avatarModelSelect.addEventListener('change', function() {
+            const selectedModel = avatarModelSelect.value;
+            let modelPath;
+            if (selectedModel === 'mao_pro') {
+                modelPath = `models/${selectedModel}/mao_pro.model3.json`;
+            } else if (selectedModel === 'haru') {
+                modelPath = `models/${selectedModel}/haru_greeter_t03.model3.json`;
+            } else {
+                modelPath = `models/${selectedModel}/${selectedModel}.model.json`;
+            }
+            loadAvatarModel(modelPath);
+        });
+    }
 
     const tokenField = document.getElementById('token');
-    tokenField.classList.add('blurry');
-
-    tokenField.addEventListener('focus', () => {
-        tokenField.classList.remove('blurry');
-    });
-
-    tokenField.addEventListener('blur', () => {
+    if (tokenField) {
         tokenField.classList.add('blurry');
-    });
+
+        tokenField.addEventListener('focus', () => {
+            tokenField.classList.remove('blurry');
+        });
+
+        tokenField.addEventListener('blur', () => {
+            tokenField.classList.add('blurry');
+        });
+    }
 
     const clientIdField = document.getElementById('clientId');
-    clientIdField.classList.add('blurry');
-
-    clientIdField.addEventListener('focus', () => {
-        clientIdField.classList.remove('blurry');
-    });
-
-    clientIdField.addEventListener('blur', () => {
+    if (clientIdField) {
         clientIdField.classList.add('blurry');
+
+        clientIdField.addEventListener('focus', () => {
+            clientIdField.classList.remove('blurry');
+        });
+
+        clientIdField.addEventListener('blur', () => {
+            clientIdField.classList.add('blurry');
+        });
+    }
+
+    const configBtn = document.getElementById('configBtn');
+    if (configBtn) {
+        configBtn.addEventListener('click', () => {
+            const modal = document.getElementById('configModal');
+            modal.style.display = 'block';
+        });
+    }
+
+    const closeModalBtn = document.querySelector('.close');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            const modal = document.getElementById('configModal');
+            modal.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('configModal');
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
     });
+
+    const saveModalConfigBtn = document.getElementById('saveModalConfigBtn');
+    if (saveModalConfigBtn) {
+        saveModalConfigBtn.addEventListener('click', () => {
+            const extraDelayListener = document.getElementById('modalExtraDelayListener') ? document.getElementById('modalExtraDelayListener').value.trim() : '';
+            const nbSpamMessage = document.getElementById('modalNbSpamMessage') ? document.getElementById('modalNbSpamMessage').value.trim() : '';
+            const botNameFollowSub = document.getElementById('modalBotNameFollowSub') ? document.getElementById('modalBotNameFollowSub').value.trim() : '';
+            const keyWordFollow = document.getElementById('modalKeyWordFollow') ? document.getElementById('modalKeyWordFollow').value.trim() : '';
+            const keyWordSub = document.getElementById('modalKeyWordSub') ? document.getElementById('modalKeyWordSub').value.trim() : '';
+            const delimiterName = document.getElementById('modalDelimiterName') ? document.getElementById('modalDelimiterName').value.trim() : '';
+            const delimiterNameEnd = document.getElementById('modalDelimiterNameEnd') ? document.getElementById('modalDelimiterNameEnd').value.trim() : '';
+            const channelName = document.getElementById('modalChannelName') ? document.getElementById('modalChannelName').value.trim() : '';
+            const token = document.getElementById('modalToken') ? document.getElementById('modalToken').value.trim() : '';
+            const clientId = document.getElementById('modalClientId') ? document.getElementById('modalClientId').value.trim() : '';
+
+            // Update the main configuration fields
+            if (document.getElementById('extraDelayListener')) document.getElementById('extraDelayListener').value = extraDelayListener;
+            if (document.getElementById('nbSpamMessage')) document.getElementById('nbSpamMessage').value = nbSpamMessage;
+            if (document.getElementById('botNameFollowSub')) document.getElementById('botNameFollowSub').value = botNameFollowSub;
+            if (document.getElementById('keyWordFollow')) document.getElementById('keyWordFollow').value = keyWordFollow;
+            if (document.getElementById('keyWordSub')) document.getElementById('keyWordSub').value = keyWordSub;
+            if (document.getElementById('delimiterName')) document.getElementById('delimiterName').value = delimiterName;
+            if (document.getElementById('delimiterNameEnd')) document.getElementById('delimiterNameEnd').value = delimiterNameEnd;
+            if (document.getElementById('channelName')) document.getElementById('channelName').value = channelName;
+            if (document.getElementById('token')) document.getElementById('token').value = token;
+            if (document.getElementById('clientId')) document.getElementById('clientId').value = clientId;
+
+            // Save configuration to .env file
+            const config = {
+                EXTRA_DELAY_LISTENER: extraDelayListener,
+                NB_SPAM_MESSAGE: nbSpamMessage,
+                BOT_NAME_FOLLOW_SUB: botNameFollowSub,
+                KEY_WORD_FOLLOW: keyWordFollow,
+                KEY_WORD_SUB: keyWordSub,
+                DELIMITER_NAME: delimiterName,
+                DELIMITER_NAME_END: delimiterNameEnd,
+                CHANNEL_NAME: channelName,
+                TOKEN: token,
+                CLIENT_ID: clientId
+            };
+            socket.emit('save_config', config);
+
+            // Close the modal
+            const modal = document.getElementById('configModal');
+            modal.style.display = 'none';
+        });
+    }
 }
 
 function showQuestionDisplay(text) {
@@ -501,22 +606,34 @@ socket.on('connect', () => console.log('WebSocket connected:', socket.id));
 socket.on('disconnect', () => console.log('WebSocket disconnected'));
 
 socket.on('load_config', data => {
-    document.getElementById('personaName').value = data.PERSONA_NAME || '';
-    document.getElementById('personaRole').value = data.PERSONA_ROLE || '';
-    document.getElementById('prePrompt').value = data.PRE_PROMPT || '';
-    document.getElementById('avatarModel').value = data.AVATAR_MODEL || '';
-    document.getElementById('channelName').value = data.CHANNEL_NAME || '';
-    document.getElementById('token').value = data.TOKEN || '';
-    document.getElementById('clientId').value = data.CLIENT_ID || '';
-    document.getElementById('extraDelayListener').value = data.EXTRA_DELAY_LISTENER || '';
-    document.getElementById('nbSpamMessage').value = data.NB_SPAM_MESSAGE || '';
-    document.getElementById('ollamaModel').value = data.OLLAMA_MODEL || '';
-    document.getElementById('botNameFollowSub').value = data.BOT_NAME_FOLLOW_SUB || '';
-    document.getElementById('keyWordFollow').value = data.KEY_WORD_FOLLOW || '';
-    document.getElementById('keyWordSub').value = data.KEY_WORD_SUB || '';
-    document.getElementById('delimiterName').value = data.DELIMITER_NAME || '';
-    document.getElementById('delimiterNameEnd').value = data.DELIMITER_NAME_END || '';
-    document.getElementById('backgroundImage').value = data.BACKGROUND_IMAGE || '';
+    if (data.PERSONA_NAME) document.getElementById('personaName').value = data.PERSONA_NAME;
+    if (data.PERSONA_ROLE) document.getElementById('personaRole').value = data.PERSONA_ROLE;
+    if (data.PRE_PROMPT) document.getElementById('prePrompt').value = data.PRE_PROMPT;
+    if (data.AVATAR_MODEL) document.getElementById('avatarModel').value = data.AVATAR_MODEL;
+    if (data.OLLAMA_MODEL) document.getElementById('ollamaModel').value = data.OLLAMA_MODEL;
+    if (data.CHANNEL_NAME) document.getElementById('modalChannelName').value = data.CHANNEL_NAME;
+    if (data.TOKEN) document.getElementById('modalToken').value = data.TOKEN;
+    if (data.CLIENT_ID) document.getElementById('modalClientId').value = data.CLIENT_ID;
+    if (data.EXTRA_DELAY_LISTENER) document.getElementById('modalExtraDelayListener').value = data.EXTRA_DELAY_LISTENER;
+    if (data.NB_SPAM_MESSAGE) document.getElementById('modalNbSpamMessage').value = data.NB_SPAM_MESSAGE;
+    if (data.BOT_NAME_FOLLOW_SUB) document.getElementById('modalBotNameFollowSub').value = data.BOT_NAME_FOLLOW_SUB;
+    if (data.KEY_WORD_FOLLOW) document.getElementById('modalKeyWordFollow').value = data.KEY_WORD_FOLLOW;
+    if (data.KEY_WORD_SUB) document.getElementById('modalKeyWordSub').value = data.KEY_WORD_SUB;
+    if (data.DELIMITER_NAME) document.getElementById('modalDelimiterName').value = data.DELIMITER_NAME;
+    if (data.DELIMITER_NAME_END) document.getElementById('modalDelimiterNameEnd').value = data.DELIMITER_NAME_END;
+    if (data.BACKGROUND_IMAGE) document.getElementById('backgroundImage').value = data.BACKGROUND_IMAGE;
+
+    if (data.AVATAR_MODEL) {
+        let modelPath;
+        if (data.AVATAR_MODEL === 'mao_pro') {
+            modelPath = `models/${data.AVATAR_MODEL}/mao_pro.model3.json`;
+        } else if (data.AVATAR_MODEL === 'haru') {
+            modelPath = `models/${data.AVATAR_MODEL}/haru_greeter_t03.model3.json`;
+        } else {
+            modelPath = `models/${data.AVATAR_MODEL}/${data.AVATAR_MODEL}.model.json`;
+        }
+        loadAvatarModel(modelPath);
+    }
 
     if (data.BACKGROUND_IMAGE) {
         document.body.style.backgroundImage = `url('/static/images/background/${data.BACKGROUND_IMAGE}')`;

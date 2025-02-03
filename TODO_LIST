@@ -1,5 +1,7 @@
 Step 1
     Refactoring split in different file app.py
+        Convert to jquery to get less line ?
+        Spliting python logic in different file
     Speach to text to make Bot answer you directly,
     UI CFG => Activate/desactive Microphone
     UI CFG => Which micro to used
