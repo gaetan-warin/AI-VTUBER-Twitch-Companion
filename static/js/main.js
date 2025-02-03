@@ -283,28 +283,18 @@ let audioContext, audioInput, analyser;
 const waveCanvas = document.getElementById('waveCanvas');
 const microphoneAudio = document.getElementById('microphoneAudio');
 
-function initializeWaveVisualization() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.error('Your browser does not support mediastream');
+function initializeWaveVisualization(stream) {
+    if (!stream) {
+        console.error('No audio stream provided');
         return;
     }
 
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-        .then(function onSuccess(stream) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext)();
-            audioInput = audioContext.createMediaStreamSource(stream);
-            analyser = audioContext.createAnalyser();
-            audioInput.connect(analyser);
+    audioContext = new (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext)();
+    audioInput = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    audioInput.connect(analyser);
 
-            const binaryData = [stream];
-            microphoneAudio.src = window.URL.createObjectURL(new Blob(binaryData, { type: 'application/zip' }));
-            microphoneAudio.onloadedmetadata = function(e) { };
-
-            drawSpectrum(analyser);
-        })
-        .catch(function(e) {
-            console.error('Error accessing microphone:', e);
-        });
+    drawSpectrum(analyser);
 }
 
 function drawSpectrum(analyser) {
@@ -337,6 +327,10 @@ function drawSpectrum(analyser) {
     requestAnimationFrame(drawMeter);
 }
 
+function getSelectedMicrophone() {
+    return $('#preferredMicrophone').val();
+}
+
 function startRecording() {
     if (!recognition) initializeSpeechRecognition();
     if (isSpeaking) {
@@ -346,23 +340,25 @@ function startRecording() {
         hideSpeechBubble();
     }
 
-    initializeWaveVisualization();
-
-    recognition.start();
-    isRecording = true;
-    $('#startRecordingBtn').text('Stop Recording').addClass('recording');
+    const selectedMicrophoneId = getSelectedMicrophone();
     
-    if ($('#waveToggle').is(':checked')) {
-        $('#waveCanvas').show();
-    }
-    
-    // Update microphone selection when starting recording
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => updateMicrophoneList())
-        .catch(err => {
-            console.error('Microphone access denied:', err);
-            stopRecording();
-        });
+    navigator.mediaDevices.getUserMedia({ 
+        audio: { deviceId: selectedMicrophoneId ? { exact: selectedMicrophoneId } : undefined } 
+    })
+    .then(stream => {
+        initializeWaveVisualization(stream);
+        recognition.start();
+        isRecording = true;
+        $('#startRecordingBtn').text('Stop Recording').addClass('recording');
+        
+        if ($('#waveToggle').is(':checked')) {
+            $('#waveCanvas').show();
+        }
+    })
+    .catch(err => {
+        console.error('Microphone access denied:', err);
+        alert('Failed to access the microphone. Please check your permissions.');
+    });
 }
 
 function stopRecording() {
@@ -381,6 +377,7 @@ function stopRecording() {
 
 function updateMicrophoneList() {
     const micSelect = $('#preferredMicrophone');
+    const currentSelection = micSelect.val();
     micSelect.empty();
 
     return navigator.mediaDevices.enumerateDevices()
@@ -390,6 +387,10 @@ function updateMicrophoneList() {
                     micSelect.append(new Option(device.label || `Microphone ${micSelect.children().length + 1}`, device.deviceId));
                 }
             });
+            // Restore the previous selection if it still exists
+            if (currentSelection && micSelect.find(`option[value="${currentSelection}"]`).length) {
+                micSelect.val(currentSelection);
+            }
         })
         .catch(err => {
             console.error('Error accessing media devices:', err);
@@ -468,10 +469,13 @@ function setupEventListeners() {
     });
 
     $('#preferredMicrophone').on('change', function() {
+        const selectedMicrophoneId = $(this).val();
         if (isRecording) {
             stopRecording();
             startRecording();
         }
+        // Save the selected microphone ID
+        localStorage.setItem('preferredMicrophone', selectedMicrophoneId);
     });
 
     $('#waveToggle').on('change', function() {
@@ -637,4 +641,10 @@ $(document).ready(() => {
     socket.connect();
     initializeApp();
     $('#waveCanvas').hide();
+
+    // Load saved microphone preference
+    const savedMicrophoneId = localStorage.getItem('preferredMicrophone');
+    if (savedMicrophoneId) {
+        $('#preferredMicrophone').val(savedMicrophoneId);
+    }
 });
