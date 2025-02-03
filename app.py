@@ -113,8 +113,8 @@ def trigger_speak():
 
     if text:
         socketio.emit('speak_text', {'text': text})
-        return jsonify({'status': 'success', 'message': 'Text sent to speak'}, 200)
-    return jsonify({'status': 'error', 'message': 'No text provided'}, 400)
+        return jsonify({'status': 'success', 'message': 'Text sent to speak'}), 200
+    return jsonify({'status': 'error', 'message': 'No text provided'}), 400
 
 @app.route('/trigger_ai_request', methods=['POST'])
 def trigger_ai_request():
@@ -130,11 +130,11 @@ def trigger_ai_request():
             socketio.emit('speak_text', {'text': response['message']})
         return jsonify(response), status_code
     except (ValueError, KeyError) as e:
-        return jsonify({'status': 'error', 'message': f'Invalid request format: {str(e)}')}), 400
+        return jsonify({'status': 'error', 'message': f'Invalid request format: {str(e)}'}), 400
     except ollama.ResponseError as e:
-        return jsonify({'status': 'error', 'message': f'AI processing error: {str(e)}')}), 500
+        return jsonify({'status': 'error', 'message': f'AI processing error: {str(e)}'}), 500
     except (ConnectionError, TimeoutError) as e:
-        return jsonify({'status': 'error', 'message': f'Service connection error: {str(e)}')}), 503
+        return jsonify({'status': 'error', 'message': f'Service connection error: {str(e)}'}), 503
 
 @app.route('/get_model', methods=['GET'])
 def get_model():
@@ -152,9 +152,9 @@ def get_ollama_models():
         model_names = [model['model'] for model in response['models']]
         return jsonify({'status': 'success', 'models': model_names}), 200
     except (ollama.ResponseError, ConnectionError) as e:
-        return jsonify({'status': 'error', 'message': f'Ollama service error: {str(e)}')}), 500
+        return jsonify({'status': 'error', 'message': f'Ollama service error: {str(e)}'}), 500
     except (KeyError, ValueError, AttributeError) as e:
-        return jsonify({'status': 'error', 'message': f'Invalid response format: {str(e)}')}), 500
+        return jsonify({'status': 'error', 'message': f'Invalid response format: {str(e)}'}), 500
 
 @app.route('/trigger_event', methods=['POST'])
 def trigger_event():
@@ -180,7 +180,7 @@ def get_background_images():
         images = [f for f in os.listdir(images_dir) if os.path.isfile(os.path.join(images_dir, f))]
         return jsonify({'status': 'success', 'images': images}), 200
     except (OSError, IOError) as e:
-        return jsonify({'status': 'error', 'message': f'Error accessing images: {str(e)}')}), 500
+        return jsonify({'status': 'error', 'message': f'Error accessing images: {str(e)}'}), 500
 
 @app.route('/get_avatar_models', methods=['GET'])
 def get_avatar_models():
@@ -190,7 +190,7 @@ def get_avatar_models():
         models = [f for f in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, f))]
         return jsonify({'status': 'success', 'models': models}), 200
     except (OSError, IOError) as e:
-        return jsonify({'status': 'error', 'message': f'Error accessing models: {str(e)}')}), 500
+        return jsonify({'status': 'error', 'message': f'Error accessing models: {str(e)}'}), 500
 
 @socketio.on('trigger_event')
 def handle_trigger_event(data):
