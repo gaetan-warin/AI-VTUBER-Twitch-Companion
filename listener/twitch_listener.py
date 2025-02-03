@@ -9,192 +9,162 @@ import asyncio
 import os
 import time
 import bleach
+import logging
 from dotenv import load_dotenv
 from socketio import Client
 from twitchio.ext import commands
 
-# Load default .env file
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Load configuration
 load_dotenv(encoding='latin1')
 
-# Twitch CFG
-TWITCH_TOKEN = os.getenv("TWITCH_TOKEN")
-CLIENT_ID = os.getenv("CLIENT_ID")
-CHANNEL_NAME = [os.getenv("CHANNEL_NAME")]
-EXTRA_DELAY_LISTENER = float(os.getenv("EXTRA_DELAY_LISTENER"))
-NB_SPAM_MESSAGE = float(os.getenv("NB_SPAM_MESSAGE"))
+class Config:
+    def __init__(self):
+        self.fields = [
+            'TWITCH_TOKEN', 'CLIENT_ID', 'CHANNEL_NAME', 'EXTRA_DELAY_LISTENER',
+            'NB_SPAM_MESSAGE', 'API_URL', 'API_URL_PORT', 'BOT_NAME_FOLLOW_SUB',
+            'KEY_WORD_FOLLOW', 'KEY_WORD_SUB', 'DELIMITER_NAME', 'DELIMITER_NAME_END'
+        ]
+        self.load()
 
-# Avatar server URL
-API_URL = os.getenv("API_URL", "localhost")
-API_URL_PORT = os.getenv("API_URL_PORT", "5000")
+    def load(self):
+        for field in self.fields:
+            value = os.getenv(field)
+            setattr(self, field.lower(), value)
+        
+        # Convert numeric values
+        self.extra_delay_listener = float(self.extra_delay_listener)
+        self.nb_spam_message = float(self.nb_spam_message)
+        self.channel_name = [self.channel_name]  # Convert to list for twitchio
 
-BOT_NAME_FOLLOW_SUB = "botwarga"
-KEY_WORD_FOLLOW = "New FOLLOW(S)"
-KEY_WORD_SUB = "NEW SUB"
-DELIMITER_NAME = "{"
-DELIMITER_NAME_END = "}"
+    def update(self, **kwargs):
+        for key, value in kwargs.items():
+            if key.upper() in self.fields:
+                setattr(self, key.lower(), value)
+        
+        # Convert numeric values
+        if 'EXTRA_DELAY_LISTENER' in kwargs:
+            self.extra_delay_listener = float(self.extra_delay_listener)
+        if 'NB_SPAM_MESSAGE' in kwargs:
+            self.nb_spam_message = float(self.nb_spam_message)
 
-# Initialize SocketIO client with retry mechanism
+config = Config()
+
+# Initialize SocketIO client
 socket = Client()
 
 def connect_socket():
-    """Establish connection to WebSocket server with retry mechanism.
-
-    Attempts to connect up to 10 times with 2-second delay between retries.
-    """
     retries = 10
     for attempt in range(retries):
         try:
-            socket.connect(f"{API_URL}:{API_URL_PORT}")
-            print("Connected to WebSocket server")
+            socket.connect(f"{config.api_url}:{config.api_url_port}")
+            logger.info("Connected to WebSocket server")
             break
         except (ConnectionError, TimeoutError) as e:
-            print(f"Connection attempt {attempt + 1} failed: {e}")
+            logger.error(f"Connection attempt {attempt + 1} failed: {e}")
             time.sleep(2)
     else:
-        print("Failed to connect to WebSocket server after several attempts")
+        logger.error("Failed to connect to WebSocket server after several attempts")
 
 connect_socket()
 
 class TwitchBot(commands.Bot):
-    """Twitch chat bot that handles messages and events.
-
-    Manages chat interactions, follows, subscriptions, and AI request processing
-    with built-in spam protection and delay management.
-    """
-
     def __init__(self):
-        """Initialize the Twitch bot with configuration and state variables."""
         super().__init__(
-            token=TWITCH_TOKEN,
-            client_id=CLIENT_ID,
+            token=config.twitch_token,
+            client_id=config.client_id,
             prefix="",
-            initial_channels=CHANNEL_NAME,
+            initial_channels=config.channel_name,
         )
-
         self.processing = False
         self.processing_time = 0
         self.user_last_message = {}
-        self.spam_time_window = NB_SPAM_MESSAGE
-        self.extra_delay = EXTRA_DELAY_LISTENER
-        self.bot_name_follow_sub = BOT_NAME_FOLLOW_SUB
-        self.key_word_follow = KEY_WORD_FOLLOW
-        self.key_word_sub = KEY_WORD_SUB
-        self.delimiter_name = DELIMITER_NAME
-        self.delimiter_name_end = DELIMITER_NAME_END
-
-    def update(self, **kwargs):
-        """Update bot configuration values.
-
-        Args:
-            **kwargs: Configuration key-value pairs to update
-        """
-        config_map = {
-            'EXTRA_DELAY_LISTENER': ('extra_delay', float),
-            'NB_SPAM_MESSAGE': ('spam_time_window', float),
-            'BOT_NAME_FOLLOW_SUB': ('bot_name_follow_sub', str),
-            'KEY_WORD_FOLLOW': ('key_word_follow', str),
-            'KEY_WORD_SUB': ('key_word_sub', str),
-            'DELIMITER_NAME': ('delimiter_name', str),
-            'DELIMITER_NAME_END': ('delimiter_name_end', str)
-        }
-
-        for key, value in kwargs.items():
-            if key in config_map:
-                attr_name, converter = config_map[key]
-                try:
-                    setattr(self, attr_name, converter(value))
-                except (ValueError, TypeError) as e:
-                    print(f"Error updating {key}: {e}")
 
     async def event_ready(self):
-        """Handle bot ready event, logging connection status."""
-        print(f"Logged in as | {self.nick}")
-        print(f"Connected to channel | {CHANNEL_NAME}")
+        logger.info(f"Logged in as | {self.nick}")
+        logger.info(f"Connected to channel | {config.channel_name}")
 
     async def event_message(self, message):
-        """Process incoming Twitch chat messages.
-
-        Handles follow/sub events, spam detection, and AI requests.
-
-        Args:
-            message: The incoming Twitch chat message object
-        """
         if message.echo:
             return
 
-        if message.author.name == self.bot_name_follow_sub and self.key_word_follow in message.content:
-            follower_name = message.content.split(self.delimiter_name)[1].split(self.delimiter_name_end)[0]
-            text = f"Wonderful, we have a new follower. Thank you: {follower_name}"
-            socket.emit('speak', {'text': text})
-            socket.emit('trigger_event', {'event_type': 'follow', 'username': follower_name})
+        if self._handle_follow_sub_event(message):
             return
 
-        if message.author.name == self.bot_name_follow_sub and self.key_word_sub in message.content:
-            follower_name = message.content.split(self.delimiter_name)[1].split(self.delimiter_name_end)[0]
-            text = f"Incredible, we have a new subscriber. Thank you so much: {follower_name}"
-            socket.emit('speak', {'text': text})
-            socket.emit('trigger_event', {'event_type': 'sub', 'username': follower_name})
-            return
+        await self._handle_user_message(message)
 
+    def _handle_follow_sub_event(self, message):
+        if message.author.name == config.bot_name_follow_sub:
+            if config.key_word_follow in message.content:
+                self._emit_celebration('follow', message.content)
+                return True
+            elif config.key_word_sub in message.content:
+                self._emit_celebration('sub', message.content)
+                return True
+        return False
+
+    def _emit_celebration(self, event_type, content):
+        name = content.split(config.delimiter_name)[1].split(config.delimiter_name_end)[0]
+        text = f"{'Wonderful, we have a new follower' if event_type == 'follow' else 'Incredible, we have a new subscriber'}. Thank you: {name}"
+        socket.emit('speak', {'text': text})
+        socket.emit('trigger_event', {'event_type': event_type, 'username': name})
+
+    async def _handle_user_message(self, message):
         current_time = time.time()
-        if self.processing and current_time - self.processing_time < self.extra_delay:
+        if self.processing and current_time - self.processing_time < config.extra_delay_listener:
             return
 
         user_id = message.author.name
-        if user_id in self.user_last_message:
-            last_message, last_time = self.user_last_message[user_id]
-            if current_time - last_time < self.spam_time_window and message.content == last_message:
-                print(f"Spam detected from {user_id}: {message.content}")
-                return
+        if self._is_spam(user_id, message.content, current_time):
+            logger.info(f"Spam detected from {user_id}: {message.content}")
+            return
 
         self.user_last_message[user_id] = (message.content, current_time)
 
         if message.content.startswith('!ai'):
-            user_input = message.content[4:].strip()
-            if not user_input:
-                msg = f"{message.author.name}, please provide a valid question."
-                await message.channel.send(msg)
-                return
+            await self._process_ai_request(message)
 
-            self.processing = True
-            self.processing_time = current_time
+    def _is_spam(self, user_id, content, current_time):
+        if user_id in self.user_last_message:
+            last_message, last_time = self.user_last_message[user_id]
+            return (current_time - last_time < config.nb_spam_message and content == last_message)
+        return False
 
-            try:
-                # Sanitize the user input
-                sanitized_input = bleach.clean(user_input)
+    async def _process_ai_request(self, message):
+        user_input = message.content[4:].strip()
+        if not user_input:
+            await message.channel.send(f"{message.author.name}, please provide a valid question.")
+            return
 
-                # Emit the AI request to the WebSocket server
-                socket.emit('trigger_ai_request', {'message': sanitized_input})
+        self.processing = True
+        self.processing_time = time.time()
 
-                # Emit username and question to WebSocket server
-                data = {'username': message.author.name, 'question': sanitized_input}
-                socket.emit('display_question', data)
-
-            except (ConnectionError, TimeoutError) as e:
-                print(f"Socket connection error: {e}")
-                await self._wait_for_extra_delay()
-                self.processing = False
-            except ValueError as e:
-                print(f"Data processing error: {e}")
-                await self._wait_for_extra_delay()
-                self.processing = False
-
-    async def _wait_for_extra_delay(self):
-        """Wait for the configured delay between message processing."""
-        await asyncio.sleep(self.extra_delay)
-
+        try:
+            sanitized_input = bleach.clean(user_input)
+            socket.emit('trigger_ai_request', {'message': sanitized_input})
+            socket.emit('display_question', {'username': message.author.name, 'question': sanitized_input})
+        except Exception as e:
+            logger.error(f"Error processing AI request: {e}")
+        finally:
+            await asyncio.sleep(config.extra_delay_listener)
+            self.processing = False
 
 if __name__ == "__main__":
     bot = TwitchBot()
 
     @socket.on('update_twitch_config')
     def handle_config_update(data):
-        """Handle real-time configuration updates from the web interface."""
         try:
-            bot.update(**data)
-            print("Twitch listener configuration updated successfully")
-        except (ValueError, TypeError) as e:
-            print(f"Error updating twitch listener configuration: {e}")
+            config.update(**data)
+            # Update bot attributes that depend on config
+            bot.extra_delay_listener = config.extra_delay_listener
+            bot.nb_spam_message = config.nb_spam_message
+            logger.info("Twitch listener configuration updated successfully")
+        except Exception as e:
+            logger.error(f"Error updating twitch listener configuration: {e}")
 
     bot.run()
     socket.disconnect()
