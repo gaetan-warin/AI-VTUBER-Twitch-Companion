@@ -17,7 +17,7 @@ from twitchio.ext import commands
 load_dotenv(encoding='latin1')
 
 # Twitch CFG
-TOKEN = os.getenv("TOKEN")
+TWITCH_TOKEN = os.getenv("TWITCH_TOKEN")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CHANNEL_NAME = [os.getenv("CHANNEL_NAME")]
 EXTRA_DELAY_LISTENER = float(os.getenv("EXTRA_DELAY_LISTENER"))
@@ -65,7 +65,7 @@ class TwitchBot(commands.Bot):
     def __init__(self):
         """Initialize the Twitch bot with configuration and state variables."""
         super().__init__(
-            token=TOKEN,
+            token=TWITCH_TOKEN,
             client_id=CLIENT_ID,
             prefix="",
             initial_channels=CHANNEL_NAME,

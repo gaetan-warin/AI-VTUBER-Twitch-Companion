@@ -48,7 +48,7 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
     OLLAMA_MODEL=deepseek-r1:1.5b
 
     # Twitch
-    TOKEN=YOUR_TWITCH_TOKEN
+    TWITCH_TOKEN=YOUR_TWITCH_TOKEN
     CLIENT_ID=YOUR_TWITCH_CLIENT_ID
     BOT_NAME=ai_chat_bot
     CHANNEL_NAME=YOUR_CHANNEL_NAME
@@ -85,7 +85,7 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 - `API_URL`: IP of flash server
 - `API_URL_PORT`: Port of flash server
 - `OLLAMA_MODEL`: The Ollama model to use (default: deepseek-r1:1.5b)
-- `TOKEN`: Your Twitch OAuth token
+- `TWITCH_TOKEN`: Your Twitch OAuth token
 - `CLIENT_ID`: Your Twitch application client ID
 - `BOT_NAME`: Name of your Twitch bot
 - `CHANNEL_NAME`: The Twitch channel to monitor

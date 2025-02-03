@@ -56,14 +56,24 @@ class Config:
         self.ollama_model = os.getenv("OLLAMA_MODEL")
         self.avatar_model = os.getenv("AVATAR_MODEL")
         self.background_image = os.getenv("BACKGROUND_IMAGE")
+        self.channel_name = os.getenv("CHANNEL_NAME")
+        self.twitch_token = os.getenv("TWITCH_TOKEN")
+        self.client_id = os.getenv("CLIENT_ID")
+        self.extra_delay_listener = os.getenv("EXTRA_DELAY_LISTENER")
+        self.nb_spam_message = os.getenv("NB_SPAM_MESSAGE")
+        self.bot_name_follow_sub = os.getenv("BOT_NAME_FOLLOW_SUB")
+        self.key_word_follow = os.getenv("KEY_WORD_FOLLOW")
+        self.key_word_sub = os.getenv("KEY_WORD_SUB")
+        self.delimiter_name = os.getenv("DELIMITER_NAME")
+        self.delimiter_name_end = os.getenv("DELIMITER_NAME_END")
 
     def update(self, **kwargs):
         """Update configuration values."""
         for key, value in kwargs.items():
             if hasattr(self, key.lower()):
                 setattr(self, key.lower(), value)
-        if 'background_image' in kwargs:
-            self.background_image = kwargs['background_image']
+        # if 'background_image' in kwargs:
+        #     self.background_image = kwargs['background_image']
 
 config = Config()
 
@@ -74,123 +84,27 @@ def home():
     """Render the main avatar interface page."""
     return render_template('avatar.html')
 
-@app.route('/start_listener', methods=['POST'])
-def start_listener():
-    """Start the Twitch listener bot."""
-    global listener_process
-    listener_dir = os.path.join(app.root_path, 'listener')
-    venv_python = os.path.join(app.root_path, 'venv', 'Scripts', 'python.exe')
-    if listener_process is None:
-        if not os.path.isdir(listener_dir):
-            return jsonify({'status': 'error', 'message': 'Listener directory does not exist'}), 400
-        listener_process = subprocess.Popen([venv_python, 'twitch_listener.py'], cwd=listener_dir)
-        return jsonify({'status': 'success', 'message': 'Twitch listener started'}), 200
-    return jsonify({'status': 'error', 'message': 'Twitch listener already running'}), 400
-
-@app.route('/stop_listener', methods=['POST'])
-def stop_listener():
-    """Stop the Twitch listener bot."""
-    global listener_process
-    if listener_process is not None:
-        listener_process.terminate()
-        listener_process = None
-        return jsonify({'status': 'success', 'message': 'Twitch listener stopped'}), 200
-    return jsonify({'status': 'error', 'message': 'Twitch listener not running'}), 400
-
-@app.route('/listener_status', methods=['GET'])
-def listener_status():
-    """Check the status of the Twitch listener bot."""
-    global listener_process
-    if listener_process is not None and listener_process.poll() is None:
-        return jsonify({'status': 'running'}), 200
-    return jsonify({'status': 'stopped'}), 200
-
-@app.route('/trigger_speak', methods=['POST'])
-def trigger_speak():
-    """Emit text to the frontend for speech synthesis via WebSocket."""
-    data = request.get_json()
-    text = data.get('text', '').strip()
-
-    if text:
-        socketio.emit('speak_text', {'text': text})
-        return jsonify({'status': 'success', 'message': 'Text sent to speak'}), 200
-    return jsonify({'status': 'error', 'message': 'No text provided'}), 400
-
-@app.route('/trigger_ai_request', methods=['POST'])
-def trigger_ai_request():
-    """Handle AI request processing and response emission."""
-    print("in trigger_ai_request")
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'status': 'error', 'message': 'No JSON data received'}), 400
-        user_input = data.get('message', '').strip()
-        response, status_code = process_ai_request(user_input)
-        if status_code == 200:
-            socketio.emit('speak_text', {'text': response['message']})
-        return jsonify(response), status_code
-    except (ValueError, KeyError) as e:
-        return jsonify({'status': 'error', 'message': f'Invalid request format: {str(e)}'}), 400
-    except ollama.ResponseError as e:
-        return jsonify({'status': 'error', 'message': f'AI processing error: {str(e)}'}), 500
-    except (ConnectionError, TimeoutError) as e:
-        return jsonify({'status': 'error', 'message': f'Service connection error: {str(e)}'}), 503
-
-@app.route('/get_model', methods=['GET'])
-def get_model():
-    """Get the path to the Live2D model file."""
-    avatar_model_path = "models/shizuku/shizuku.model.json"
-    if avatar_model_path == "shizuku":
-        avatar_model_path = "models/shizuku/shizuku.model.json"
-    return avatar_model_path
-
-@app.route('/get_ollama_models', methods=['GET'])
-def get_ollama_models():
-    """Retrieve list of available Ollama models."""
-    try:
-        response = ollama.list()
-        model_names = [model['model'] for model in response['models']]
-        return jsonify({'status': 'success', 'models': model_names}), 200
-    except (ollama.ResponseError, ConnectionError) as e:
-        return jsonify({'status': 'error', 'message': f'Ollama service error: {str(e)}'}), 500
-    except (KeyError, ValueError, AttributeError) as e:
-        return jsonify({'status': 'error', 'message': f'Invalid response format: {str(e)}'}), 500
-
-@app.route('/trigger_event', methods=['POST'])
-def trigger_event():
-    """Handle POST requests for triggering celebration events."""
-    data = request.get_json()
-    event_type = data.get('event_type', '').strip()
-    username = data.get('username', '').strip()
-
-    if event_type and username:
-        emit_celebration_event(event_type, username)
-        response = {
-            'status': 'success',
-            'message': f'{event_type} event triggered for {username}'
-        }
-        return jsonify(response), 200
-    return jsonify({'status': 'error', 'message': 'Invalid event data'}), 400
-
-@app.route('/get_background_images', methods=['GET'])
-def get_background_images():
-    """Retrieve list of available background images."""
-    images_dir = os.path.join(app.root_path, 'static', 'images', 'background')
-    try:
-        images = [f for f in os.listdir(images_dir) if os.path.isfile(os.path.join(images_dir, f))]
-        return jsonify({'status': 'success', 'images': images}), 200
-    except (OSError, IOError) as e:
-        return jsonify({'status': 'error', 'message': f'Error accessing images: {str(e)}'}), 500
-
-@app.route('/get_avatar_models', methods=['GET'])
+# Modify existing functions to return only the data, not the full response
 def get_avatar_models():
-    """Retrieve list of available avatar models."""
     models_dir = os.path.join(app.root_path, 'models')
     try:
-        models = [f for f in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, f))]
-        return jsonify({'status': 'success', 'models': models}), 200
+        return {'models': [f for f in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, f))]}
     except (OSError, IOError) as e:
-        return jsonify({'status': 'error', 'message': f'Error accessing models: {str(e)}'}), 500
+        return {'models': [], 'error': str(e)}
+
+def get_background_images():
+    images_dir = os.path.join(app.root_path, 'static', 'images', 'background')
+    try:
+        return {'images': [f for f in os.listdir(images_dir) if os.path.isfile(os.path.join(images_dir, f))]}
+    except (OSError, IOError) as e:
+        return {'images': [], 'error': str(e)}
+
+def get_ollama_models():
+    try:
+        response = ollama.list()
+        return {'models': [model['model'] for model in response['models']]}
+    except Exception as e:
+        return {'models': [], 'error': str(e)}
 
 @socketio.on('trigger_event')
 def handle_trigger_event(data):
@@ -287,57 +201,6 @@ def clean_response(response):
     response = re.sub(r'\s+', ' ', response).strip()
     return response
 
-@socketio.on('load_config')
-def handle_load_config():
-    """Load and emit current configuration values from environment variables.
-
-    Reloads the .env file and sends all configuration values to the client.
-    """
-    try:
-        # Reload the .env file to get the most recent values
-        load_dotenv(override=True, encoding='latin1')
-        env_config = {
-            'PERSONA_NAME': os.getenv('PERSONA_NAME', ''),
-            'PERSONA_ROLE': os.getenv('PERSONA_ROLE', ''),
-            'PRE_PROMPT': os.getenv('PRE_PROMPT', ''),
-            'AVATAR_MODEL': os.getenv('AVATAR_MODEL', ''),
-            'CHANNEL_NAME': os.getenv('CHANNEL_NAME', ''),
-            'TOKEN': os.getenv('TOKEN', ''),
-            'CLIENT_ID': os.getenv('CLIENT_ID', ''),
-            'EXTRA_DELAY_LISTENER': os.getenv('EXTRA_DELAY_LISTENER', ''),
-            'NB_SPAM_MESSAGE': os.getenv('NB_SPAM_MESSAGE', ''),
-            'OLLAMA_MODEL': os.getenv('OLLAMA_MODEL', ''),
-            'BOT_NAME_FOLLOW_SUB': os.getenv('BOT_NAME_FOLLOW_SUB', ''),
-            'KEY_WORD_FOLLOW': os.getenv('KEY_WORD_FOLLOW', ''),
-            'KEY_WORD_SUB': os.getenv('KEY_WORD_SUB', ''),
-            'DELIMITER_NAME': os.getenv('DELIMITER_NAME', ''),
-            'DELIMITER_NAME_END': os.getenv('DELIMITER_NAME_END', ''),
-            'BACKGROUND_IMAGE': os.getenv('BACKGROUND_IMAGE', '')
-        }
-        print("Loaded config:", env_config)  # Debugging line
-        socketio.emit('load_config', env_config)
-    except (IOError, OSError) as e:
-        error_msg = f'File operation error: {str(e)}'
-        print(error_msg)  # Debugging line
-        socketio.emit('load_config_error', {'status': 'error', 'message': error_msg})
-    except (KeyError, ValueError) as e:
-        error_msg = f'Configuration error: {str(e)}'
-        print(error_msg)  # Debugging line
-        socketio.emit('load_config_error', {'status': 'error', 'message': error_msg})
-
-# Serve model files and resources (textures, expressions, motions, sounds)
-@app.route('/models/<path:filename>')
-def serve_model_files(filename):
-    """Serve Live2D model files and resources from the models directory.
-
-    Args:
-        filename (str): Path to the requested model file
-    """
-    models_dir = os.path.join(app.root_path, 'models')
-    if os.path.isfile(os.path.join(models_dir, filename)):
-        return send_from_directory(models_dir, filename)
-    return abort(404)
-
 # SocketIO event handlers
 @socketio.on('connect')
 def handle_connect():
@@ -355,12 +218,6 @@ def handle_speak(data):
     text = data.get('text', '').strip()
     if text:
         socketio.emit('speak_text', {'text': text})
-
-@socketio.on('request_model_path')
-def handle_request_model_path():
-    """Handle requests for Live2D model path and emit to client."""
-    avatar_model_path = "models/shizuku/shizuku.model.json"
-    socketio.emit('model_path', {'path': avatar_model_path})
 
 @socketio.on('ask_ai')
 def handle_ask_ai(data):
@@ -417,7 +274,7 @@ def handle_save_config(data):
                         value = f'"{value}"'
                     f.write(f"{key}={value}\n")
         print("Configuration saved to .env")
-
+        
         # Forward relevant config updates to twitch listener
         twitch_config = {
             'EXTRA_DELAY_LISTENER': data.get('EXTRA_DELAY_LISTENER', ''),
@@ -428,6 +285,8 @@ def handle_save_config(data):
             'DELIMITER_NAME': data.get('DELIMITER_NAME', ''),
             'DELIMITER_NAME_END': data.get('DELIMITER_NAME_END', '')
         }
+        
+        config.update(**data)
         socketio.emit('update_twitch_config', twitch_config)
 
         # Emit the updated configuration back to the client
@@ -442,90 +301,75 @@ def handle_save_config(data):
         print(error_msg)
         socketio.emit('save_config_response', {'status': 'error', 'message': error_msg})
 
-@socketio.on('update_live_global_env')
-def handle_update_live_global_env(data):
-    """Update global environment variables with new configuration values.
+@socketio.on('get_listener_status')
+def handle_get_listener_status():
+    status = 'running' if listener_process is not None and listener_process.poll() is None else 'stopped'
+    socketio.emit('listener_status', {'status': status})
 
-    Handles real-time updates to persona, model, and bot settings without server restart.
-    """
+@socketio.on('start_listener')
+def handle_start_listener():
+    global listener_process
+    if listener_process is None:
+        # Start the listener process
+        listener_dir = os.path.join(app.root_path, 'listener')
+        venv_python = os.path.join(app.root_path, 'venv', 'Scripts', 'python.exe')
+        if not os.path.isdir(listener_dir):
+            socketio.emit('listener_update', {'status': 'error', 'action': 'start', 'message': 'Listener directory does not exist'})
+            return
+        listener_process = subprocess.Popen([venv_python, 'twitch_listener.py'], cwd=listener_dir)
+        socketio.emit('listener_update', {'status': 'success', 'action': 'start'})
+    else:
+        socketio.emit('listener_update', {'status': 'error', 'action': 'start', 'message': 'Listener already running'})
+
+@socketio.on('stop_listener')
+def handle_stop_listener():
+    global listener_process
+    if listener_process is not None:
+        listener_process.terminate()
+        listener_process = None
+        socketio.emit('listener_update', {'status': 'success', 'action': 'stop'})
+    else:
+        socketio.emit('listener_update', {'status': 'error', 'action': 'stop', 'message': 'Listener not running'})
+
+@socketio.on('get_init_cfg')
+def handle_get_init_cfg():
+    """Handle WebSocket request for initial configuration data."""
+    print(config.avatar_model)
     try:
-        config.update(
-            persona_name = data.get('personaName', '').strip(),
-            persona_role = data.get('personaRole', '').strip(),
-            pre_prompt = data.get('prePrompt', '').strip(),
-            ollama_model = data.get('ollamaModel', '').strip(),
-            avatar_model = data.get('avatarModel', '').strip(),
-            background_image = data.get('backgroundImage', '').strip()
-        )
-        socketio.emit('update_live_global_env_response',
-                     {'status': 'success', 'message': 'Persona updated successfully'})
-    except (KeyError, ValueError) as e:
-        socketio.emit('update_live_global_env_response',
-                     {'status': 'error', 'message': f'Data format error: {str(e)}'})
-    except AttributeError as e:
-        socketio.emit('update_live_global_env_response',
-                     {'status': 'error', 'message': f'Variable access error: {str(e)}'})
-
-@socketio.on('load_config')
-def handle_load_config():
-    """Load and emit current configuration values from environment variables.
-
-    Reloads the .env file and sends all configuration values to the client.
-    """
-    try:
-        # Reload the .env file to get the most recent values
-        load_dotenv(override=True, encoding='latin1')
-        env_config = {
-            'PERSONA_NAME': os.getenv('PERSONA_NAME', ''),
-            'PERSONA_ROLE': os.getenv('PERSONA_ROLE', ''),
-            'PRE_PROMPT': os.getenv('PRE_PROMPT', ''),
-            'AVATAR_MODEL': os.getenv('AVATAR_MODEL', ''),
-            'CHANNEL_NAME': os.getenv('CHANNEL_NAME', ''),
-            'TOKEN': os.getenv('TOKEN', ''),
-            'CLIENT_ID': os.getenv('CLIENT_ID', ''),
-            'EXTRA_DELAY_LISTENER': os.getenv('EXTRA_DELAY_LISTENER', ''),
-            'NB_SPAM_MESSAGE': os.getenv('NB_SPAM_MESSAGE', ''),
-            'OLLAMA_MODEL': os.getenv('OLLAMA_MODEL', ''),
-            'BOT_NAME_FOLLOW_SUB': os.getenv('BOT_NAME_FOLLOW_SUB', ''),
-            'KEY_WORD_FOLLOW': os.getenv('KEY_WORD_FOLLOW', ''),
-            'KEY_WORD_SUB': os.getenv('KEY_WORD_SUB', ''),
-            'DELIMITER_NAME': os.getenv('DELIMITER_NAME', ''),
-            'DELIMITER_NAME_END': os.getenv('DELIMITER_NAME_END', ''),
-            'BACKGROUND_IMAGE': os.getenv('BACKGROUND_IMAGE', '')
+        configObj = {
+            'PERSONA_NAME': config.persona_name,
+            'PERSONA_ROLE': config.persona_role,
+            'PRE_PROMPT': config.pre_prompt,
+            'AVATAR_MODEL': config.avatar_model,
+            'CHANNEL_NAME': config.channel_name,
+            'TWITCH_TOKEN': config.twitch_token,
+            'CLIENT_ID': config.client_id,
+            'EXTRA_DELAY_LISTENER': config.extra_delay_listener,
+            'NB_SPAM_MESSAGE': config.nb_spam_message,
+            'OLLAMA_MODEL': config.ollama_model,
+            'BOT_NAME_FOLLOW_SUB': config.bot_name_follow_sub,
+            'KEY_WORD_FOLLOW': config.key_word_follow,
+            'KEY_WORD_SUB': config.key_word_sub,
+            'DELIMITER_NAME': config.delimiter_name,
+            'DELIMITER_NAME_END': config.delimiter_name_end,
+            'BACKGROUND_IMAGE': config.background_image
         }
-        socketio.emit('load_config', env_config)
-    except (IOError, OSError) as e:
-        socketio.emit('load_config_error',
-                     {'status': 'error', 'message': f'File operation error: {str(e)}'})
-    except (KeyError, ValueError) as e:
-        socketio.emit('load_config_error',
-                     {'status': 'error', 'message': f'Configuration error: {str(e)}'})
 
-@socketio.on('update_twitch_listener')
-def handle_update_twitch_listener(data):
-    """Update Twitch listener configuration values in real-time.
+        avatar_models = get_avatar_models()
+        background_images = get_background_images()
+        ollama_models = get_ollama_models()
 
-    Handles real-time updates to twitch listener settings without restart.
-    """
-    try:
-        # Forward the configuration update to the twitch listener
-        socketio.emit('update_twitch_config', {
-            'EXTRA_DELAY_LISTENER': data.get('extraDelayListener', ''),
-            'NB_SPAM_MESSAGE': data.get('nbSpamMessage', ''),
-            'BOT_NAME_FOLLOW_SUB': data.get('botNameFollowSub', ''),
-            'KEY_WORD_FOLLOW': data.get('keyWordFollow', ''),
-            'KEY_WORD_SUB': data.get('keyWordSub', ''),
-            'DELIMITER_NAME': data.get('delimiterName', ''),
-            'DELIMITER_NAME_END': data.get('delimiterNameEnd', '')
+        socketio.emit('init_cfg', {
+            'status': 'success',
+            'data': {
+                'config': configObj,
+                'avatarList': avatar_models.get('models', []),
+                'backgroundList': background_images.get('images', []),
+                'ollamaModelList': ollama_models.get('models', [])
+            }
         })
-        socketio.emit('update_twitch_listener_response',
-                     {'status': 'success', 'message': 'Twitch listener updated successfully'})
-    except (KeyError, ValueError) as e:
-        socketio.emit('update_twitch_listener_response',
-                     {'status': 'error', 'message': f'Data format error: {str(e)}'})
-    except (ConnectionError, TimeoutError) as e:
-        socketio.emit('update_twitch_listener_response',
-                     {'status': 'error', 'message': f'Socket connection error: {str(e)}'})
+    except Exception as e:
+        socketio.emit('init_cfg', {'status': 'error', 'message': str(e)})
 
 # Serve static files
 @app.route('/static/<path:filename>')
@@ -536,6 +380,19 @@ def static_files(filename):
         filename (str): Path to the requested static file within the static directory
     """
     return send_from_directory(os.path.join(app.root_path, 'static'), filename)
+
+# Serve model files and resources (textures, expressions, motions, sounds)
+@app.route('/models/<path:filename>')
+def serve_model_files(filename):
+    """Serve Live2D model files and resources from the models directory.
+
+    Args:
+        filename (str): Path to the requested model file
+    """
+    models_dir = os.path.join(app.root_path, 'models')
+    if os.path.isfile(os.path.join(models_dir, filename)):
+        return send_from_directory(models_dir, filename)
+    return abort(404)
 
 # Main entry point
 if __name__ == '__main__':

@@ -250,19 +250,6 @@ function setupEventListeners() {
     const avatarModelSelect = $('#avatarModel');
     const backgroundImageSelect = $('#backgroundImage');
 
-    populateSelect('/get_avatar_models', avatarModelSelect);
-    populateSelect('/get_background_images', backgroundImageSelect, (data) => {
-        const backgroundImage = data.BACKGROUND_IMAGE || '';
-        if (backgroundImage) {
-            backgroundImageSelect.val(backgroundImage);
-            $('body').css({
-                backgroundImage: `url('/static/images/background/${backgroundImage}')`,
-                backgroundPosition: 'center',
-                backgroundSize: 'cover'
-            });
-        }
-    });
-
     backgroundImageSelect.on('change', function() {
         const selectedImage = $(this).val();
         $('body').css({
@@ -280,7 +267,7 @@ function setupEventListeners() {
         loadAvatarModel(modelPath);
     });
 
-    $('#token, #clientId').addClass('blurry').on('focus', function() {
+    $('#TWITCH_TOKEN, #clientId').addClass('blurry').on('focus', function() {
         $(this).removeClass('blurry');
     }).on('blur', function() {
         $(this).addClass('blurry');
@@ -303,10 +290,41 @@ function setupEventListeners() {
     $('#saveModalConfigBtn').on('click', saveModalConfig);
 }
 
+function initializeApp() {
+    socket.emit('get_init_cfg');
+}
+
+socket.on('init_cfg', function(data) {
+    console.log("Received initial configuration:", data);  // Debugging line
+    if (data.status === 'success') {
+        const { config, avatarList, backgroundList, ollamaModelList } = data.data;
+
+        // Populate select elements
+        populateSelectElement('#avatarModel', avatarList);
+        populateSelectElement('#backgroundImage', backgroundList);
+        populateSelectElement('#ollamaModel', ollamaModelList);
+
+        // Apply configuration
+        applyConfig(config);
+
+        checkListenerStatus();
+    } else {
+        console.error('Failed to load initial configuration:', data.message);
+    }
+});
+
+function populateSelectElement(selector, items) {
+    const selectElement = $(selector);
+    selectElement.empty();
+    items.forEach(item => {
+        selectElement.append(new Option(item, item));
+    });
+}
+
 function saveConfig() {
     const config = getConfigValues([
         'personaName', 'personaRole', 'prePrompt', 'avatarModel', 'backgroundImage',
-        'channelName', 'token', 'clientId', 'extraDelayListener',
+        'channelName', 'twitchToken', 'clientId', 'extraDelayListener',
         'nbSpamMessage', 'ollamaModel', 'botNameFollowSub', 'keyWordFollow',
         'keyWordSub', 'delimiterName', 'delimiterNameEnd'
     ]);
@@ -315,22 +333,20 @@ function saveConfig() {
 }
 
 function saveModalConfig() {
-    const config = getConfigValues([
-        'extraDelayListener', 'nbSpamMessage', 'botNameFollowSub',
-        'keyWordFollow', 'keyWordSub', 'delimiterName', 'delimiterNameEnd',
-        'channelName', 'token', 'clientId'
-    ]);
-
-    Object.keys(config).forEach(key => {
-        $(`#${key}`).val(config[key]);
-    });
-
-    socket.emit('save_config', config);
     $('#configModal').hide();
 }
 
 function camelToSnakeCase(str) {
     return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+}
+
+function snakeToCamelCase(str) {
+    return str.toLowerCase().replace(/([-_][a-z])/g, group =>
+        group
+          .toUpperCase()
+          .replace('-', '')
+          .replace('_', '')
+      );;
 }
 
 function getConfigValues(fields) {
@@ -349,29 +365,6 @@ function showQuestionDisplay(text) {
     questionDisplay.data('hideTimeout', setTimeout(() => {
         questionDisplay.hide();
     }, 10000));
-}
-
-function populateSelect(url, selectElement, callback) {
-    $.getJSON(url, (data) => {
-        if (data.status === 'success' && Array.isArray(data.models)) {
-            data.models.forEach(model => {
-                selectElement.append(new Option(model, model));
-            });
-            if (callback) callback(data);
-        } else if (data.status === 'success' && Array.isArray(data.images)) {
-            // Handle background images separately
-            data.images.forEach(image => {
-                selectElement.append(new Option(image, image));
-            });
-            if (callback) callback(data);
-        } else {
-            console.error(`Failed to load data from ${url}:`, data.message || 'Unexpected data format');
-        }
-    }).fail((error) => console.error(`Error fetching data from ${url}:`, error));
-}
-
-function populateOllamaModels() {
-    populateSelect('/get_ollama_models', $('#ollamaModel'));
 }
 
 function triggerFireworks() {
@@ -435,54 +428,16 @@ function showNotification(type, message) {
 
 // Socket event listeners
 socket.on('speak_text', data => speak(data.text));
-socket.on('model_path', data => {
-    modelPath = data.path;
-    console.log("Received model path:", modelPath);
-    main(modelPath);
-});
 socket.on('ai_response', data => speak(data.text));
 socket.on('display_question', showQuestionDisplay);
 socket.on('fireworks', triggerFireworks);
 socket.on('connect', () => console.log('WebSocket connected:', socket.id));
 socket.on('disconnect', () => console.log('WebSocket disconnected'));
 
-socket.on('load_config', data => {
-    if (data.PERSONA_NAME) $('#personaName').val(data.PERSONA_NAME);
-    if (data.PERSONA_ROLE) $('#personaRole').val(data.PERSONA_ROLE);
-    if (data.PRE_PROMPT) $('#prePrompt').val(data.PRE_PROMPT);
-    if (data.AVATAR_MODEL) $('#avatarModel').val(data.AVATAR_MODEL);
-    if (data.OLLAMA_MODEL) $('#ollamaModel').val(data.OLLAMA_MODEL);
-    if (data.CHANNEL_NAME) $('#channelName').val(data.CHANNEL_NAME);
-    if (data.TOKEN) $('#token').val(data.TOKEN);
-    if (data.CLIENT_ID) $('#clientId').val(data.CLIENT_ID);
-    if (data.EXTRA_DELAY_LISTENER) $('#extraDelayListener').val(data.EXTRA_DELAY_LISTENER);
-    if (data.NB_SPAM_MESSAGE) $('#nbSpamMessage').val(data.NB_SPAM_MESSAGE);
-    if (data.BOT_NAME_FOLLOW_SUB) $('#botNameFollowSub').val(data.BOT_NAME_FOLLOW_SUB);
-    if (data.KEY_WORD_FOLLOW) $('#keyWordFollow').val(data.KEY_WORD_FOLLOW);
-    if (data.KEY_WORD_SUB) $('#keyWordSub').val(data.KEY_WORD_SUB);
-    if (data.DELIMITER_NAME) $('#delimiterName').val(data.DELIMITER_NAME);
-    if (data.DELIMITER_NAME_END) $('#delimiterNameEnd').val(data.DELIMITER_NAME_END);
-    if (data.BACKGROUND_IMAGE) $('#backgroundImage').val(data.BACKGROUND_IMAGE);
-
-    if (data.AVATAR_MODEL) {
-        let modelPath;
-        if (data.AVATAR_MODEL === 'mao_pro') {
-            modelPath = `models/${data.AVATAR_MODEL}/mao_pro.model3.json`;
-        } else if (data.AVATAR_MODEL === 'haru') {
-            modelPath = `models/${data.AVATAR_MODEL}/haru_greeter_t03.model3.json`;
-        } else {
-            modelPath = `models/${data.AVATAR_MODEL}/${data.AVATAR_MODEL}.model.json`;
-        }
-        loadAvatarModel(modelPath);
-    }
-
-    if (data.BACKGROUND_IMAGE) {
-        $('body').css({
-            backgroundImage: `url('/static/images/background/${data.BACKGROUND_IMAGE}')`,
-            backgroundPosition: 'center',
-            backgroundSize: 'cover'
-        });
-    }
+socket.on('model_path', data => {
+    modelPath = data.path;
+    console.log("Received model path:", modelPath);
+    main(modelPath);
 });
 
 socket.on('save_config_response', function(response) {
@@ -495,11 +450,20 @@ socket.on('save_config_response', function(response) {
 
 function applyConfig(config) {
     const fields = [
-        'AVATAR_MODEL', 'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'BACKGROUND_IMAGE'
+        'AVATAR_MODEL', 'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'BACKGROUND_IMAGE',
+        'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
+        'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
+        'DELIMITER_NAME', 'DELIMITER_NAME_END'
     ];
 
     fields.forEach(field => {
-        $(`#${field.toLowerCase()}`).val(config[field] || '');
+        const $field = $(`#${snakeToCamelCase(field)}`);
+        if ($field.is('select')) {
+            $field.find(`option[value="${config[field]}"]`).prop('selected', true);
+            $field.trigger('change');
+        } else {
+            $field.val(config[field]);
+        }
     });
 
     if (config.BACKGROUND_IMAGE) {
@@ -518,11 +482,6 @@ function applyConfig(config) {
     }
 }
 
-socket.on('load_config', config => {
-    console.log("Loaded config:", config);  // Debugging line
-    applyConfig(config);
-});
-
 function updateListenerStatus(status) {
     const statusText = $('#listenerStatusText');
     statusText.text(status ? 'Running' : 'Stopped');
@@ -530,37 +489,28 @@ function updateListenerStatus(status) {
 }
 
 function checkListenerStatus() {
-    $.getJSON('/listener_status', (data) => {
-        updateListenerStatus(data.status === 'running');
-    });
+    socket.emit('get_listener_status');
 }
 
 $('#startListenerBtn').on('click', () => {
-    $.post('/start_listener', (data) => {
-        if (data.status === 'success') {
-            updateListenerStatus(true);
-        } else {
-            alert('Failed to start listener: ' + data.message);
-        }
-    });
+    socket.emit('start_listener');
 });
 
 $('#stopListenerBtn').on('click', () => {
-    $.post('/stop_listener', (data) => {
-        if (data.status === 'success') {
-            updateListenerStatus(false);
-        } else {
-            alert('Failed to stop listener: ' + data.message);
-        }
-    });
+    socket.emit('stop_listener');
+});
+
+socket.on('listener_update', (data) => {
+    if (data.status === 'success') {
+        updateListenerStatus(data.action === 'start');
+    } else {
+        alert(`Failed to ${data.action} listener: ${data.message}`);
+    }
 });
 
 // Initial setup
 $(document).ready(() => {
     setupEventListeners();
     socket.connect();
-    socket.emit('request_model_path');
-    populateOllamaModels();
-    socket.emit('load_config');
-    checkListenerStatus();
+    initializeApp();
 });
