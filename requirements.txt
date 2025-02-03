@@ -6,4 +6,4 @@ requests==2.31.0
 twitchio==2.3.0
 python-dotenv
 bleach==6.0.0
-ollama==0.1.0  # Add the new dependency
+ollama==0.1.0 
