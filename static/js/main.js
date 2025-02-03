@@ -23,7 +23,7 @@ const config = {
         'AVATAR_MODEL', 'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'BACKGROUND_IMAGE',
         'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
         'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
-        'DELIMITER_NAME', 'DELIMITER_NAME_END'
+        'DELIMITER_NAME', 'DELIMITER_NAME_END', 'PREFERRED_MICROPHONE'
     ],
     get: function() {
         return this.fields.reduce((acc, field) => {
@@ -237,6 +237,95 @@ function askAI(text) {
     socket.emit('ask_ai', { text });
 }
 
+// Speech Recognition Setup
+let recognition = null;
+let isRecording = false;
+
+// Update the speech recognition initialization
+function initializeSpeechRecognition() {
+    if (!('webkitSpeechRecognition' in window)) {
+        alert('Speech recognition is not supported in this browser.');
+        return;
+    }
+
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+        if (isSpeaking) {
+            synth.cancel();
+            isSpeaking = false;
+            gsap.killTweensOf(mouthState);
+            hideSpeechBubble();
+        }
+    };
+
+    recognition.onresult = (event) => {
+        const text = event.results[event.results.length - 1][0].transcript;
+        askAI(text);
+    };
+
+    recognition.onend = () => {
+        if (isRecording) {
+            recognition.start();
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        stopRecording();
+    };
+}
+
+function startRecording() {
+    if (!recognition) initializeSpeechRecognition();
+    if (isSpeaking) {
+        synth.cancel();
+        isSpeaking = false;
+        gsap.killTweensOf(mouthState);
+        hideSpeechBubble();
+    }
+    recognition.start();
+    isRecording = true;
+    $('#startRecordingBtn').text('Stop Recording').addClass('recording');
+    
+    // Update microphone selection when starting recording
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => updateMicrophoneList())
+        .catch(err => {
+            console.error('Microphone access denied:', err);
+            stopRecording();
+        });
+}
+
+function stopRecording() {
+    if (recognition) {
+        recognition.stop();
+        isRecording = false;
+        $('#startRecordingBtn').text('Start Recording').removeClass('recording');
+    }
+}
+
+function updateMicrophoneList() {
+    const micSelect = $('#preferredMicrophone');
+    micSelect.empty();
+
+    return navigator.mediaDevices.enumerateDevices()
+        .then(devices => {
+            devices.forEach(device => {
+                if (device.kind === 'audioinput') {
+                    micSelect.append(new Option(device.label || `Microphone ${micSelect.children().length + 1}`, device.deviceId));
+                }
+            });
+        })
+        .catch(err => {
+            console.error('Error accessing media devices:', err);
+            throw err;
+        });
+}
+
 function setupEventListeners() {
     $('#speakBtn, #askAIBtn').on('click', function() {
         const text = $('#makeItSpeak').val().trim();
@@ -298,6 +387,21 @@ function setupEventListeners() {
     $('#TWITCH_TOKEN, #clientId').addClass('blurry')
         .on('focus', function() { $(this).removeClass('blurry'); })
         .on('blur', function() { $(this).addClass('blurry'); });
+
+    $('#startRecordingBtn').on('click', () => {
+        if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    });
+
+    $('#preferredMicrophone').on('change', function() {
+        if (isRecording) {
+            stopRecording();
+            startRecording();
+        }
+    });
 }
 
 function initializeApp() {
@@ -305,19 +409,40 @@ function initializeApp() {
 }
 
 socket.on('init_cfg', function(data) {
-    console.log("Received initial configuration:", data);  // Debugging line
+    console.log("Received initial configuration:", data);
     if (data.status === 'success') {
         const { config: configData, avatarList, backgroundList, ollamaModelList } = data.data;
 
-        // Populate select elements
-        populateSelectElement('#avatarModel', avatarList);
-        populateSelectElement('#backgroundImage', backgroundList);
-        populateSelectElement('#ollamaModel', ollamaModelList);
+        // Populate select elements and track completion
+        const populationPromises = [
+            new Promise(resolve => {
+                populateSelectElement('#avatarModel', avatarList);
+                resolve('avatarModel');
+            }),
+            new Promise(resolve => {
+                populateSelectElement('#backgroundImage', backgroundList);
+                resolve('backgroundImage');
+            }),
+            new Promise(resolve => {
+                populateSelectElement('#ollamaModel', ollamaModelList);
+                resolve('ollamaModel');
+            }),
+            new Promise(resolve => {
+                updateMicrophoneList().then(() => resolve('microphone'));
+            })
+        ];
 
-        // Apply configuration
-        config.set(configData);
-
-        checkListenerStatus();
+        // Wait for all fields to be populated
+        Promise.all(populationPromises)
+            .then(results => {
+                console.log('All fields populated:', results);
+                // Apply configuration after all fields are ready
+                config.set(configData);
+                checkListenerStatus();
+            })
+            .catch(error => {
+                console.error('Error during field population:', error);
+            });
     } else {
         console.error('Failed to load initial configuration:', data.message);
     }
@@ -325,10 +450,19 @@ socket.on('init_cfg', function(data) {
 
 function populateSelectElement(selector, items) {
     const selectElement = $(selector);
+    if (!selectElement.length) {
+        console.error(`Select element ${selector} not found`);
+        return false;
+    }
     selectElement.empty();
-    items.forEach(item => {
-        selectElement.append(new Option(item, item));
-    });
+    if (Array.isArray(items)) {
+        items.forEach(item => {
+            selectElement.append(new Option(item, item));
+        });
+        return true;
+    }
+    console.error(`Invalid items array for ${selector}`);
+    return false;
 }
 
 function saveConfig() {
