@@ -469,13 +469,11 @@ function setupEventListeners() {
     });
 
     $('#preferredMicrophone').on('change', function() {
-        const selectedMicrophoneId = $(this).val();
         if (isRecording) {
             stopRecording();
             startRecording();
         }
         // Save the selected microphone ID
-        localStorage.setItem('preferredMicrophone', selectedMicrophoneId);
     });
 
     $('#waveToggle').on('change', function() {
@@ -641,10 +639,4 @@ $(document).ready(() => {
     socket.connect();
     initializeApp();
     $('#waveCanvas').hide();
-
-    // Load saved microphone preference
-    const savedMicrophoneId = localStorage.getItem('preferredMicrophone');
-    if (savedMicrophoneId) {
-        $('#preferredMicrophone').val(savedMicrophoneId);
-    }
 });
