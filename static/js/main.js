@@ -17,6 +17,42 @@ const celebrationAudio = new Audio('static/mp3/success.mp3');
 celebrationAudio.volume = 0.3;
 celebrationAudio.preload = 'auto';
 
+// Configuration object
+const config = {
+    fields: [
+        'AVATAR_MODEL', 'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'BACKGROUND_IMAGE',
+        'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
+        'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
+        'DELIMITER_NAME', 'DELIMITER_NAME_END'
+    ],
+    get: function() {
+        return this.fields.reduce((acc, field) => {
+            acc[field] = $(`#${this.snakeToCamelCase(field)}`).val().trim();
+            return acc;
+        }, {});
+    },
+    set: function(data) {
+        this.fields.forEach(field => {
+            const $field = $(`#${this.snakeToCamelCase(field)}`);
+            if ($field.length && data[field]) {
+                if ($field.is('select')) {
+                    $field.val(data[field]).trigger('change');
+                } else {
+                    $field.val(data[field]);
+                }
+            }
+        });
+    },
+    snakeToCamelCase: function(str) {
+        return str.toLowerCase().replace(/([-_][a-z])/g, group =>
+            group.toUpperCase().replace('-', '').replace('_', '')
+        );
+    },
+    camelToSnakeCase: function(str) {
+        return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    }
+};
+
 // Initialize application
 function main(modelPath) {
     if (!modelPath) {
@@ -123,29 +159,24 @@ function speak(text) {
         hideSpeechBubble();
     }
 
-    // Split text into sentences and wait times
     const parts = text.split(/(\{\*\d+\*\})|([.!?]\s+)/).filter(Boolean);
-
     let partIndex = 0;
 
-    // Function to speak each part
     function speakNextPart() {
         if (partIndex < parts.length) {
-            let currentPart = parts[partIndex];
+            const currentPart = parts[partIndex];
             const waitMatch = currentPart.match(/\{\*(\d+)\*\}/);
 
             if (waitMatch) {
-                const waitTime = parseInt(waitMatch[1], 10);
                 setTimeout(() => {
                     partIndex++;
                     speakNextPart();
-                }, waitTime);
+                }, parseInt(waitMatch[1], 10));
             } else {
-                // Extract punctuation from the part to be spoken
                 const punctuationMatch = currentPart.match(/[.!?]\s*$/);
                 const punctuation = punctuationMatch ? punctuationMatch[0] : '';
                 const textToSpeak = currentPart.replace(/[.!?]\s*$/, '').trim();
-                showSpeechBubble(textToSpeak + punctuation); // Show speech bubble with punctuation
+                showSpeechBubble(textToSpeak + punctuation);
 
                 const utterance = new SpeechSynthesisUtterance(textToSpeak);
                 const voice = synth.getVoices().find(v => v.name.includes('Female')) || synth.getVoices()[0];
@@ -153,48 +184,48 @@ function speak(text) {
                 Object.assign(utterance, {
                     voice: voice,
                     pitch: 1.1,
-                    rate: 0.95
-                });
-
-                utterance.onstart = () => {
-                    isSpeaking = true;
-                    // Animate mouth using GSAP with sine wave pattern
-                    gsap.to(mouthState, {
-                        duration: 0.2,
-                        value: 1,
-                        repeat: -1,
-                        yoyo: true,
-                        ease: "sine.inOut",
-                        modifiers: {
-                            value: () => Math.abs(Math.sin(performance.now() / 200)) * 0.8
-                        }
-                    });
-                };
-
-                utterance.onend = () => {
-                    isSpeaking = false;
-                    gsap.killTweensOf(mouthState);
-                    gsap.to(mouthState, {
-                        duration: 0.3,
-                        value: 0,
-                        ease: "power2.out"
-                    });
-                    hideSpeechBubble(); // Hide speech bubble when speech ends
-                    partIndex++;
-                    // Add a short pause for punctuation
-                    if (punctuation) {
-                        setTimeout(speakNextPart, 500);
-                    } else {
-                        speakNextPart();
+                    rate: 0.95,
+                    onstart: () => {
+                        isSpeaking = true;
+                        animateMouth();
+                    },
+                    onend: () => {
+                        isSpeaking = false;
+                        stopMouthAnimation();
+                        hideSpeechBubble();
+                        partIndex++;
+                        setTimeout(speakNextPart, punctuation ? 500 : 0);
                     }
-                };
+                });
 
                 synth.speak(utterance);
             }
         }
     }
 
-    speakNextPart(); // Start speaking the first part
+    speakNextPart();
+}
+
+function animateMouth() {
+    gsap.to(mouthState, {
+        duration: 0.2,
+        value: 1,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut",
+        modifiers: {
+            value: () => Math.abs(Math.sin(performance.now() / 200)) * 0.8
+        }
+    });
+}
+
+function stopMouthAnimation() {
+    gsap.killTweensOf(mouthState);
+    gsap.to(mouthState, {
+        duration: 0.3,
+        value: 0,
+        ease: "power2.out"
+    });
 }
 
 function askAI(text) {
@@ -215,42 +246,39 @@ function setupEventListeners() {
         }
     });
 
-    $('#makeItSpeak').on('keydown', (event) => {
+    $('#makeItSpeak').on('keydown', event => {
         if (event.ctrlKey && event.key === 'Enter') {
-            const text = $(event.target).val().trim();
+            const text = event.target.value.trim();
             if (text) {
                 socket.emit('speak', { text });
-                $(event.target).val('');
+                event.target.value = '';
             }
         }
     });
 
-    $('#toggleSidebarBtn').on('click', () => {
+    $('#toggleSidebarBtn, #toggleSidebarBtnCollapsed').on('click', () => {
         const sidebar = $('#sidebar');
         sidebar.toggleClass('collapsed');
         $('#toggleSidebarBtn').text(sidebar.hasClass('collapsed') ? 'Expand' : 'Collapse');
         $('#toggleSidebarBtnCollapsed').toggle(sidebar.hasClass('collapsed'));
     });
 
-    $('#toggleSidebarBtnCollapsed').on('click', () => {
-        $('#sidebar').removeClass('collapsed');
-        $('#toggleSidebarBtn').text('Collapse');
-        $('#toggleSidebarBtnCollapsed').hide();
-    });
-
     $('.tab-button').on('click', function() {
         $('.tab-button').removeClass('active');
         $('.tab-content').hide();
         $(this).addClass('active');
-        $('#' + $(this).data('tab')).show();
+        $(`#${$(this).data('tab')}`).show();
     });
 
     $('#saveConfigBtn').on('click', saveConfig);
+    $('#configBtn').on('click', () => $('#configModal').show());
+    $('.close').on('click', () => $('#configModal').hide());
+    $(window).on('click', event => {
+        if (event.target === $('#configModal')[0]) $('#configModal').hide();
+    });
+    $('#saveModalConfigBtn').on('click', saveModalConfig);
 
-    const avatarModelSelect = $('#avatarModel');
-    const backgroundImageSelect = $('#backgroundImage');
-
-    backgroundImageSelect.on('change', function() {
+    $('#backgroundImage').on('change', function() {
         const selectedImage = $(this).val();
         $('body').css({
             backgroundImage: `url('/static/images/background/${selectedImage}')`,
@@ -259,7 +287,7 @@ function setupEventListeners() {
         });
     });
 
-    avatarModelSelect.on('change', function() {
+    $('#avatarModel').on('change', function() {
         const selectedModel = $(this).val();
         const modelPath = selectedModel === 'mao_pro' ? `models/${selectedModel}/mao_pro.model3.json` :
                           selectedModel === 'haru' ? `models/${selectedModel}/haru_greeter_t03.model3.json` :
@@ -267,27 +295,9 @@ function setupEventListeners() {
         loadAvatarModel(modelPath);
     });
 
-    $('#TWITCH_TOKEN, #clientId').addClass('blurry').on('focus', function() {
-        $(this).removeClass('blurry');
-    }).on('blur', function() {
-        $(this).addClass('blurry');
-    });
-
-    $('#configBtn').on('click', () => {
-        $('#configModal').show();
-    });
-
-    $('.close').on('click', () => {
-        $('#configModal').hide();
-    });
-
-    $(window).on('click', (event) => {
-        if (event.target === $('#configModal')[0]) {
-            $('#configModal').hide();
-        }
-    });
-
-    $('#saveModalConfigBtn').on('click', saveModalConfig);
+    $('#TWITCH_TOKEN, #clientId').addClass('blurry')
+        .on('focus', function() { $(this).removeClass('blurry'); })
+        .on('blur', function() { $(this).addClass('blurry'); });
 }
 
 function initializeApp() {
@@ -297,7 +307,7 @@ function initializeApp() {
 socket.on('init_cfg', function(data) {
     console.log("Received initial configuration:", data);  // Debugging line
     if (data.status === 'success') {
-        const { config, avatarList, backgroundList, ollamaModelList } = data.data;
+        const { config: configData, avatarList, backgroundList, ollamaModelList } = data.data;
 
         // Populate select elements
         populateSelectElement('#avatarModel', avatarList);
@@ -305,7 +315,7 @@ socket.on('init_cfg', function(data) {
         populateSelectElement('#ollamaModel', ollamaModelList);
 
         // Apply configuration
-        applyConfig(config);
+        config.set(configData);
 
         checkListenerStatus();
     } else {
@@ -322,40 +332,14 @@ function populateSelectElement(selector, items) {
 }
 
 function saveConfig() {
-    const config = getConfigValues([
-        'personaName', 'personaRole', 'prePrompt', 'avatarModel', 'backgroundImage',
-        'channelName', 'twitchToken', 'clientId', 'extraDelayListener',
-        'nbSpamMessage', 'ollamaModel', 'botNameFollowSub', 'keyWordFollow',
-        'keyWordSub', 'delimiterName', 'delimiterNameEnd'
-    ]);
-    console.log("save config:", config);
-    socket.emit('save_config', config);
+    const configData = config.get();
+    console.log("save config:", configData);
+    socket.emit('save_config', configData);
 }
 
 function saveModalConfig() {
     $('#configModal').hide();
-}
-
-function camelToSnakeCase(str) {
-    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-}
-
-function snakeToCamelCase(str) {
-    return str.toLowerCase().replace(/([-_][a-z])/g, group =>
-        group
-          .toUpperCase()
-          .replace('-', '')
-          .replace('_', '')
-      );;
-}
-
-function getConfigValues(fields) {
-    const config = {};
-    fields.forEach(field => {
-        const snakeField = camelToSnakeCase(field);
-        config[snakeField.toUpperCase()] = $(`#${field}`).val().trim();
-    });
-    return config;
+    saveConfig();
 }
 
 function showQuestionDisplay(text) {
@@ -368,48 +352,20 @@ function showQuestionDisplay(text) {
 }
 
 function triggerFireworks() {
-    // Play celebration sound
-    celebrationAudio.currentTime = 0; // Reset audio to start
-    const playPromise = celebrationAudio.play();
+    celebrationAudio.currentTime = 0;
+    celebrationAudio.play().catch(error => console.log("Audio playback failed:", error));
 
-    if (playPromise !== undefined) {
-        playPromise.catch(error => {
-            console.log("Audio playback failed:", error);
-        });
-    }
-
-    // Create multiple bursts of confetti
     const duration = 5 * 1000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
 
-    function randomInRange(min, max) {
-        return Math.random() * (max - min) + min;
-    }
-
-    const interval = setInterval(function() {
+    const interval = setInterval(() => {
         const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-            return clearInterval(interval);
-        }
-
+        if (timeLeft <= 0) return clearInterval(interval);
         const particleCount = 50 * (timeLeft / duration);
-
-        // Create confetti from random positions
-        confetti({
-            ...defaults,
-            particleCount,
-            origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
-        });
-        confetti({
-            ...defaults,
-            particleCount,
-            origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
-        });
+        confetti({ ...defaults, particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } });
     }, 250);
 
-    // Add some special effects
     confetti({
         particleCount: 100,
         spread: 70,
@@ -421,9 +377,7 @@ function triggerFireworks() {
 function showNotification(type, message) {
     const notification = $('#notification');
     notification.text(message).attr('class', `notification ${type}`).addClass('show');
-    setTimeout(() => {
-        notification.removeClass('show');
-    }, 3000);
+    setTimeout(() => notification.removeClass('show'), 3000);
 }
 
 // Socket event listeners
@@ -433,73 +387,15 @@ socket.on('display_question', showQuestionDisplay);
 socket.on('fireworks', triggerFireworks);
 socket.on('connect', () => console.log('WebSocket connected:', socket.id));
 socket.on('disconnect', () => console.log('WebSocket disconnected'));
-
 socket.on('model_path', data => {
     modelPath = data.path;
     console.log("Received model path:", modelPath);
     main(modelPath);
 });
-
 socket.on('save_config_response', function(response) {
-    if (response.status === 'success') {
-        showNotification('success', 'Configuration saved successfully');
-    } else {
-        showNotification('error', response.message);
-    }
+    showNotification(response.status === 'success' ? 'success' : 'error', 
+                     response.status === 'success' ? 'Configuration saved successfully' : response.message);
 });
-
-function applyConfig(config) {
-    const fields = [
-        'AVATAR_MODEL', 'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'BACKGROUND_IMAGE',
-        'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
-        'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
-        'DELIMITER_NAME', 'DELIMITER_NAME_END'
-    ];
-
-    fields.forEach(field => {
-        const $field = $(`#${snakeToCamelCase(field)}`);
-        if ($field.is('select')) {
-            $field.find(`option[value="${config[field]}"]`).prop('selected', true);
-            $field.trigger('change');
-        } else {
-            $field.val(config[field]);
-        }
-    });
-
-    if (config.BACKGROUND_IMAGE) {
-        $('body').css({
-            backgroundImage: `url('/static/images/background/${config.BACKGROUND_IMAGE}')`,
-            backgroundPosition: 'center',
-            backgroundSize: 'cover'
-        });
-    }
-
-    if (config.AVATAR_MODEL) {
-        const modelPath = config.AVATAR_MODEL === 'mao_pro' ? `models/${config.AVATAR_MODEL}/mao_pro.model3.json` :
-                          config.AVATAR_MODEL === 'haru' ? `models/${config.AVATAR_MODEL}/haru_greeter_t03.model3.json` :
-                          `models/${config.AVATAR_MODEL}/${config.AVATAR_MODEL}.model.json`;
-        loadAvatarModel(modelPath);
-    }
-}
-
-function updateListenerStatus(status) {
-    const statusText = $('#listenerStatusText');
-    statusText.text(status ? 'Running' : 'Stopped');
-    statusText.css('color', status ? 'green' : 'red');
-}
-
-function checkListenerStatus() {
-    socket.emit('get_listener_status');
-}
-
-$('#startListenerBtn').on('click', () => {
-    socket.emit('start_listener');
-});
-
-$('#stopListenerBtn').on('click', () => {
-    socket.emit('stop_listener');
-});
-
 socket.on('listener_update', (data) => {
     if (data.status === 'success') {
         updateListenerStatus(data.action === 'start');
@@ -507,6 +403,18 @@ socket.on('listener_update', (data) => {
         alert(`Failed to ${data.action} listener: ${data.message}`);
     }
 });
+
+function updateListenerStatus(status) {
+    const statusText = $('#listenerStatusText');
+    statusText.text(status ? 'Running' : 'Stopped').css('color', status ? 'green' : 'red');
+}
+
+function checkListenerStatus() {
+    socket.emit('get_listener_status');
+}
+
+$('#startListenerBtn').on('click', () => socket.emit('start_listener'));
+$('#stopListenerBtn').on('click', () => socket.emit('stop_listener'));
 
 // Initial setup
 $(document).ready(() => {

@@ -72,8 +72,6 @@ class Config:
         for key, value in kwargs.items():
             if hasattr(self, key.lower()):
                 setattr(self, key.lower(), value)
-        # if 'background_image' in kwargs:
-        #     self.background_image = kwargs['background_image']
 
 config = Config()
 
