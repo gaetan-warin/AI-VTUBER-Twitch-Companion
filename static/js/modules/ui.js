@@ -1,7 +1,6 @@
 import { startRecording, stopRecording, isCurrentlyRecording } from './microphone.js';
 import { loadAvatarModel, getModelPath } from './model.js';
 import { saveConfig, saveModalConfig, config, populateSelectElement } from './config.js';
-import { updateMicrophoneList } from './microphone.js';
 import { checkListenerStatus, startListener, stopListener, emit } from './socket.js';
 import { areVoicesReady } from './speech.js';
 
@@ -11,7 +10,6 @@ export function setupUI() {
     setupAvatarModel();
     setupTwitchFields();
     setupRecordingButton();
-    setupMicrophoneSelection();
     setupWaveToggle();
     $('#waveCanvas').hide();
 }
@@ -106,16 +104,6 @@ function setupRecordingButton() {
     });
 }
 
-function setupMicrophoneSelection() {
-    $('#preferredMicrophone').on('change', function() {
-        if (isCurrentlyRecording()) {
-            stopRecording();
-            startRecording();
-        }
-        // Save the selected microphone ID
-    });
-}
-
 function setupWaveToggle() {
     $('#waveToggle').on('change', function() {
         if (isCurrentlyRecording()) {
@@ -153,7 +141,6 @@ export function handleInitialConfig(data) {
             populateSelectElement('#avatarModel', avatarList),
             populateSelectElement('#backgroundImage', backgroundList),
             populateSelectElement('#ollamaModel', ollamaModelList),
-            updateMicrophoneList()
         ];
 
         Promise.all(populationPromises)

@@ -22,7 +22,7 @@ export function checkMicrophoneAccess() {
             
             if (permissionStatus.state === 'granted') {
                 $('#microphoneOverlay').hide();
-                updateMicrophoneList();
+                updateCurrentMicrophone();
             } else {
                 $('#microphoneOverlay').show();
                 if (permissionStatus.state === 'prompt') {
@@ -36,7 +36,7 @@ export function checkMicrophoneAccess() {
                 microphonePermissionState = permissionStatus.state;
                 if (permissionStatus.state === 'granted') {
                     $('#microphoneOverlay').hide();
-                    updateMicrophoneList();
+                    updateCurrentMicrophone();
                 } else {
                     $('#microphoneOverlay').show();
                     $('#microphoneOverlay p').text('Microphone access was denied. Please enable it in your browser settings.');
@@ -61,19 +61,6 @@ export function setupMicrophoneAccess() {
                 stream.getTracks().forEach(track => track.stop());
                 microphonePermissionState = 'granted';
                 $('#microphoneOverlay').hide();
-                
-                updateMicrophoneList().then(() => {
-                    navigator.mediaDevices.enumerateDevices().then(devices => {
-                        const audioDevices = devices.filter(device => device.kind === 'audioinput');
-                        if (audioDevices.length > 0) {
-                            const defaultDevice = audioDevices.find(device => device.deviceId === 'default') 
-                                             || audioDevices.find(device => device.label.toLowerCase().includes('default'))
-                                             || audioDevices[0];
-                            
-                            $('#preferredMicrophone').val(defaultDevice.deviceId);
-                        }
-                    });
-                });
             })
             .catch(err => {
                 console.error('Failed to get microphone access:', err);
@@ -95,10 +82,12 @@ export function startRecording() {
         return;
     }
 
-    const selectedMicrophoneId = $('#preferredMicrophone').val();
-    
     navigator.mediaDevices.getUserMedia({ 
-        audio: { deviceId: selectedMicrophoneId ? { exact: selectedMicrophoneId } : undefined } 
+        audio: { 
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true 
+        } 
     })
     .then(stream => {
         initializeWaveVisualization(stream);
@@ -151,31 +140,23 @@ export function stopRecording() {
     }
 }
 
-export function updateMicrophoneList() {
-    const micSelect = $('#preferredMicrophone');
-    const currentSelection = micSelect.val();
-    micSelect.empty();
-
-    return navigator.mediaDevices.enumerateDevices()
+function updateCurrentMicrophone() {
+    navigator.mediaDevices.enumerateDevices()
         .then(devices => {
             const audioDevices = devices.filter(device => device.kind === 'audioinput');
-            if (audioDevices.length === 0) {
-                $('#microphoneOverlay').show();
-                return;
-            }
-
-            audioDevices.forEach(device => {
-                micSelect.append(new Option(device.label || `Microphone ${micSelect.children().length + 1}`, device.deviceId));
-            });
-            
-            if (currentSelection && micSelect.find(`option[value="${currentSelection}"]`).length) {
-                micSelect.val(currentSelection);
+            if (audioDevices.length > 0) {
+                const defaultDevice = audioDevices.find(device => device.deviceId === 'default') 
+                                   || audioDevices.find(device => device.label.toLowerCase().includes('default'))
+                                   || audioDevices[0];
+                
+                $('#currentMicrophone').val(defaultDevice.label || 'Default Microphone');
+            } else {
+                $('#currentMicrophone').val('No microphone detected');
             }
         })
         .catch(err => {
             console.error('Error accessing media devices:', err);
-            $('#microphoneOverlay').show();
-            throw err;
+            $('#currentMicrophone').val('Unable to detect microphone');
         });
 }
 

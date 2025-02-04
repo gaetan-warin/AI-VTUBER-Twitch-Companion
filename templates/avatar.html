@@ -67,9 +67,13 @@
                             <button id="requestMicrophoneAccess">Allow Microphone Access</button>
                         </div>
                         <div class="settings-group">
-                            <label for="preferredMicrophone">Microphone:</label>
-                            <select id="preferredMicrophone"></select>
+                            <label for="currentMicrophone">Current Microphone:</label>
+                            <input type="text" id="currentMicrophone" readonly>
                         </div>
+                        <p class="microphone-instructions">To change:
+                            <br>1. Select the microphone you want as the default in your browser or system.
+                            <br>2. Restart the browser (or reload the page) to apply changes.
+                        </p>
                         <button id="startRecordingBtn">Start Recording</button>
                         <div class="checkbox-wrapper">
                             <input type="checkbox" id="waveToggle" checked>
