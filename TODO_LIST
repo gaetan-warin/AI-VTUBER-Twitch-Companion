@@ -1,5 +1,4 @@
 Step 1
-    UI CFG => Voice change management & language specification
     UI CFG => Config the bot to react only on some word when microphone is listening like a "Hey, Sarah !"
     UI CFG => Celebration on/off when sub and/or follow.
     UI CFG => what to say When sub or follow ?
