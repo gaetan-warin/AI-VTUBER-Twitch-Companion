@@ -1,15 +1,16 @@
 Step 1
-    UI CFG => Config react only on some word like a "Hey, Sarah !"
-    UI CFG => Which sound to play ? List from mp3 of static folder ? 
-    UI CFG => Celebration on/off when sub and/or follow. Button to test animation
+    UI CFG => Config the bot to react only on some word when microphone is listening like a "Hey, Sarah !"
+    UI CFG => Celebration on/off when sub and/or follow.
     UI CFG => what to say When sub or follow ?
+    UI CFG => Which sound to play on celebration ? List from mp3 of static folder ? possibility to launch a celebration from ui to test.
+    update .env.example & Readme with new info
 
 NEXT
+    Twitch auto connect
     UI CFG => Voice change management & language specification
-    UI CFG => LLM Management extension (use Local or Cloud API LLM)
-
-
+    
 VERY NEXT
-    Companion as an APP => Electron JS instead of Web Browser,
     Twitch => Regarding the person who send the message he should be able to manage to keep conversation or switch subject.
+    UI CFG => LLM Management extension (use Local or Cloud API LLM)
+    Companion as an APP => Electron JS instead of Web Browser,
     Possibility to share screen ? How to ? Picture Each 3 sec, how to provide llm picture to make him answer on content ? Search on web ?
