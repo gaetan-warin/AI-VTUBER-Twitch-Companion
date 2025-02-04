@@ -40,8 +40,8 @@ class Config:
             'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
             'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
             'DELIMITER_NAME', 'DELIMITER_NAME_END', 'SOCKETIO_IP', 'SOCKETIO_IP_PORT',
-            'SOCKETIO_CORS_ALLOWED', 'API_URL', 'API_URL_PORT', 'FIXED_LANGUAGE', 'VOICE_GENDER'
-            , 'WAKE_WORD', 'WAKE_WORD_ENABLED'
+            'SOCKETIO_CORS_ALLOWED', 'API_URL', 'API_URL_PORT', 'FIXED_LANGUAGE', 'VOICE_GENDER',
+            'WAKE_WORD', 'WAKE_WORD_ENABLED', 'CELEBRATE_FOLLOW', 'CELEBRATE_SUB'
         ]
         self.load()
 
@@ -185,10 +185,15 @@ def process_ai_request(data):
 def emit_celebration_event(event_type, username):
     """Emit celebration events to the frontend based on event type."""
     message = ""
-    if event_type == 'follow':
+    # Convert string 'true'/'false' to boolean or handle direct boolean values
+    celebrate_follow = str(config.celebrate_follow).lower() == 'true'
+    celebrate_sub = str(config.celebrate_sub).lower() == 'true'
+    
+    if event_type == 'follow' and celebrate_follow:
         message = f"New FOLLOW: {username}"
-    elif event_type == 'sub':
+    elif event_type == 'sub' and celebrate_sub:
         message = f"NEW SUB: {username}"
+        
     if message:
         socketio.emit('fireworks', {'message': message})
 

@@ -6,7 +6,7 @@ export const config = {
         'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
         'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
         'DELIMITER_NAME', 'DELIMITER_NAME_END', 'FIXED_LANGUAGE', 'VOICE_GENDER', 'WAKE_WORD',
-        'WAKE_WORD_ENABLED'
+        'WAKE_WORD_ENABLED', 'CELEBRATE_FOLLOW', 'CELEBRATE_SUB'
     ],
     get() {
         const configData = this.fields.reduce((acc, field) => {
