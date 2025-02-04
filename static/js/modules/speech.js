@@ -1,7 +1,11 @@
+import { detectLanguage } from './languageDetection.js';
+
 export const synth = window.speechSynthesis;
 export const mouthState = { value: 0 };
 let isSpeaking = false;
 let voicesReady = false;
+let currentLanguage = 'en';
+const languageVoiceMap = {};
 
 export function initializeSpeech() {
     return new Promise((resolve) => {
@@ -10,6 +14,7 @@ export function initializeSpeech() {
             if (voices.length > 0) {
                 voicesReady = true;
                 console.log('Voices loaded:', voices);
+                mapVoicesToLanguages(voices);
                 resolve();
             } else {
                 setTimeout(checkVoices, 100);
@@ -24,11 +29,27 @@ export function initializeSpeech() {
     });
 }
 
+function mapVoicesToLanguages(voices) {
+    voices.forEach(voice => {
+        const langCode = voice.lang.split('-')[0];
+        if (!languageVoiceMap[langCode]) {
+            languageVoiceMap[langCode] = [];
+        }
+        languageVoiceMap[langCode].push(voice);
+    });
+    console.log('Language-Voice mapping:', languageVoiceMap);
+}
+
+function getBestVoiceForLanguage(langCode) {
+    const voices = languageVoiceMap[langCode] || languageVoiceMap['en'];
+    return voices.find(v => v.name.includes('Female')) || voices[0];
+}
+
 export function areVoicesReady() {
     return voicesReady;
 }
 
-export function speak(text) {
+export function speak(text, forcedLanguage = null) {
     if (!text || !voicesReady) {
         console.log("Voices not loaded yet.");
         return;
@@ -40,6 +61,13 @@ export function speak(text) {
         gsap.killTweensOf(mouthState);
         hideSpeechBubble();
     }
+
+    // Simplified language determination
+    currentLanguage = forcedLanguage || 
+                     $('#fixedLanguage').val() === 'auto' ? 
+                     detectLanguage(text) : 
+                     $('#fixedLanguage').val();
+    console.log('Using language:', currentLanguage);
 
     const parts = text.split(/(\{\*\d+\*\})|([.!?]\s+)/).filter(Boolean);
     let partIndex = 0;
@@ -61,12 +89,13 @@ export function speak(text) {
                 showSpeechBubble(textToSpeak + punctuation);
 
                 const utterance = new SpeechSynthesisUtterance(textToSpeak);
-                const voice = synth.getVoices().find(v => v.name.includes('Female')) || synth.getVoices()[0];
+                const voice = getBestVoiceForLanguage(currentLanguage);
 
                 Object.assign(utterance, {
                     voice: voice,
                     pitch: 1.1,
                     rate: 0.95,
+                    lang: voice.lang,
                     onstart: () => {
                         isSpeaking = true;
                         animateMouth();
@@ -113,12 +142,10 @@ export function stopMouthAnimation() {
 function showSpeechBubble(text) {
     const bubble = $('#speech-bubble');
     bubble.text(text).show();
-
     if (window.currentModel) {
         const bounds = window.currentModel.getBounds();
         const x = window.innerWidth / 2;
         const y = (window.innerHeight / 2) - bounds.height / 2 - 50;
-
         bubble.css({
             left: `${x - bubble.outerWidth() / 2}px`,
             top: `${y}px`
@@ -132,4 +159,8 @@ function hideSpeechBubble() {
 
 export function isSpeakingNow() {
     return isSpeaking;
+}
+
+export function getCurrentLanguage() {
+    return currentLanguage;
 }

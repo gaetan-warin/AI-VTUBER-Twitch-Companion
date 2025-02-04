@@ -1,4 +1,5 @@
 Step 1
+    UI CFG => Voice change management & language specification
     UI CFG => Config the bot to react only on some word when microphone is listening like a "Hey, Sarah !"
     UI CFG => Celebration on/off when sub and/or follow.
     UI CFG => what to say When sub or follow ?
@@ -6,8 +7,7 @@ Step 1
     update .env.example & Readme with new info
 
 NEXT
-    Twitch auto connect
-    UI CFG => Voice change management & language specification
+    Add Twitch auto connect to get Twitch Token and Twitch Client ID
     
 VERY NEXT
     Twitch => Regarding the person who send the message he should be able to manage to keep conversation or switch subject.

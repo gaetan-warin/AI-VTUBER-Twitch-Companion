@@ -1,6 +1,7 @@
 import { askAI } from './socket.js';
 import { areVoicesReady } from './speech.js';
 import { showNotification } from './ui.js';
+import { detectLanguage } from './languageDetection.js';
 
 export let microphonePermissionState = 'prompt';
 let recognition = null;
@@ -167,28 +168,40 @@ function initializeSpeechRecognition() {
     }
 
     recognition = new webkitSpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = false; // Changed to false to better handle language switching
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    
+    // Initial language setup
+    const selectedLanguage = $('#fixedLanguage').val();
+    recognition.lang = selectedLanguage === 'auto' ? navigator.language || 'en-US' : getLangCode(selectedLanguage);
 
     recognition.onstart = () => {
-        console.log('Speech recognition started');
+        console.log('Speech recognition started with language:', recognition.lang);
         showNotification('info', 'Listening... Speak now');
     };
 
     recognition.onresult = (event) => {
         clearTimeout(recognitionTimeout);
         const result = event.results[event.results.length - 1];
+        
         if (result.isFinal) {
             const text = result[0].transcript;
             console.log('Speech recognized:', text);
+            
             if (text.trim()) {
+                const selectedLanguage = $('#fixedLanguage').val();
+                if (selectedLanguage === 'auto') {
+                    const detectedLang = detectLanguage(text);
+                    const newLangCode = getLangCode(detectedLang);
+                    
+                    if (newLangCode !== recognition.lang) {
+                        console.log(`Switching recognition language from ${recognition.lang} to ${newLangCode}`);
+                        recognition.lang = newLangCode;
+                        restartRecognition();
+                    }
+                }
                 askAI(text);
-            } else {
-                console.log('Empty speech detected');
             }
-        } else {
-            console.log('Interim result:', result[0].transcript);
         }
     };
 
@@ -196,22 +209,7 @@ function initializeSpeechRecognition() {
         console.log('Speech recognition ended');
         clearTimeout(recognitionTimeout);
         if (isRecording) {
-            try {
-                recognition.start();
-                console.log('Restarting speech recognition');
-                recognitionTimeout = setTimeout(() => {
-                    if (isRecording) {
-                        console.log('No speech detected for a while, restarting...');
-                        recognition.stop();
-                        showNotification('warning', 'No speech detected. Restarting...');
-                    }
-                }, 20000); // 10 seconds timeout
-            } catch (error) {
-                console.error('Error restarting speech recognition:', error);
-                isRecording = false;
-                $('#startRecordingBtn').text('Start Recording').removeClass('recording');
-                showNotification('error', 'Speech recognition stopped unexpectedly. Please start recording again.');
-            }
+            restartRecognition();
         }
     };
 
@@ -229,6 +227,48 @@ function initializeSpeechRecognition() {
             stopRecording();
         }
     };
+}
+
+function restartRecognition() {
+    try {
+        setTimeout(() => {
+            if (isRecording) {
+                recognition.start();
+                console.log('Restarting speech recognition with language:', recognition.lang);
+                recognitionTimeout = setTimeout(() => {
+                    if (isRecording) {
+                        recognition.stop();
+                        showNotification('warning', 'No speech detected. Restarting...');
+                    }
+                }, 10000);
+            }
+        }, 100);
+    } catch (error) {
+        console.error('Error restarting speech recognition:', error);
+        handleRecognitionError(error);
+    }
+}
+
+function handleRecognitionError(error) {
+    isRecording = false;
+    $('#startRecordingBtn').text('Start Recording').removeClass('recording');
+    showNotification('error', 'Speech recognition error. Please try again.');
+    console.error('Recognition error:', error);
+}
+
+function getLangCode(lang) {
+    const langCodes = {
+        'en': 'en-US',
+        'fr': 'fr-FR',
+        'es': 'es-ES',
+        'de': 'de-DE',
+        'it': 'it-IT',
+        'ja': 'ja-JP',
+        'ko': 'ko-KR',
+        'zh': 'zh-CN',
+        'ru': 'ru-RU'
+    };
+    return langCodes[lang] || 'en-US';
 }
 
 function initializeWaveVisualization(stream) {

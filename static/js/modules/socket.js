@@ -14,8 +14,12 @@ export function initializeSocket() {
     socket.on('disconnect', () => console.log('WebSocket disconnected'));
 
     socket.on('init_cfg', handleInitialConfig);
-    socket.on('speak_text', data => speak(data.text));
-    socket.on('ai_response', data => speak(data.text));
+    socket.on('speak_text', data => {
+        speak(data.text, data.fixedLanguage);
+    });
+    socket.on('ai_response', data => {
+        speak(data.text, data.fixedLanguage);
+    });
     socket.on('display_question', showQuestionDisplay);
     socket.on('fireworks', triggerFireworks);
     socket.on('model_path', data => {
@@ -34,8 +38,8 @@ export function askAI(text) {
     socket.emit('ask_ai', { text });
 }
 
-export function speakText(text) {
-    socket.emit('speak', { text });
+export function speakText(text, fixedLanguage = null) {
+    socket.emit('speak', { text, fixedLanguage });
 }
 
 export function getInitialConfig() {
@@ -59,5 +63,12 @@ export function saveConfig(configData) {
 }
 
 export function emit(canal, data) {
-    socket.emit(canal, data);
+    if (canal === 'speak' || canal === 'ask_ai') {
+        socket.emit(canal, {
+            ...data,
+            fixedLanguage: $('#fixedLanguage').val()
+        });
+    } else {
+        socket.emit(canal, data);
+    }
 }

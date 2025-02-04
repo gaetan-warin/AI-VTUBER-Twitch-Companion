@@ -5,7 +5,7 @@ export const config = {
         'AVATAR_MODEL', 'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'BACKGROUND_IMAGE',
         'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
         'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
-        'DELIMITER_NAME', 'DELIMITER_NAME_END'
+        'DELIMITER_NAME', 'DELIMITER_NAME_END', 'FIXED_LANGUAGE'
     ],
     get() {
         return this.fields.reduce((acc, field) => {

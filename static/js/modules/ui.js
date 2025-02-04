@@ -12,6 +12,7 @@ export function setupUI() {
     setupRecordingButton();
     setupWaveToggle();
     $('#waveCanvas').hide();
+    setupLanguageControls();
 }
 
 function setupEventListeners() {
@@ -22,7 +23,10 @@ function setupEventListeners() {
         }
         const text = $('#makeItSpeak').val().trim();
         if (text) {
-            emit(this.id === 'speakBtn' ? 'speak' : 'ask_ai', { text });
+            emit(this.id === 'speakBtn' ? 'speak' : 'ask_ai', { 
+                text,
+                fixedLanguage: $('#fixedLanguage').val()
+            });
             $('#makeItSpeak').val('');
         }
     });
@@ -35,7 +39,10 @@ function setupEventListeners() {
             }
             const text = event.target.value.trim();
             if (text) {
-                emit('speak', { text });
+                emit('speak', { 
+                    text,
+                    fixedLanguage: $('#fixedLanguage').val()
+                });
                 event.target.value = '';
             }
         }
@@ -112,6 +119,16 @@ function setupWaveToggle() {
     });
 }
 
+function setupLanguageControls() {
+    $('#fixedLanguage').on('change', function() {
+        saveConfig(); // Save configuration when fixed language changes
+    });
+
+    // Add language mode to config save
+    const originalFields = config.fields;
+    config.fields = [...originalFields, 'FIXED_LANGUAGE'];
+}
+
 export function showNotification(type, message) {
     const notification = $('#notification');
     notification.text(message).attr('class', `notification ${type}`).addClass('show');
@@ -147,6 +164,12 @@ export function handleInitialConfig(data) {
             .then(() => {
                 console.log('All fields populated');
                 config.set(configData);
+                
+                // Set fixed language if available
+                if (configData.fixedLanguage) {
+                    $('#fixedLanguage').val(configData.FIXED_LANGUAGE);
+                }
+                
                 checkListenerStatus();
             })
             .catch(error => {

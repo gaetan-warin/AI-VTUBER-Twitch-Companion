@@ -461,6 +461,7 @@ button:hover {
 }
 
 .notification {
+    background-color: rgba(255, 255, 255, 0.575);
     position: fixed;
     top: -100px;
     left: 50%;
@@ -624,6 +625,7 @@ button:hover {
     height: 100px;
     border-top: 2px solid var(--accent-color);
     border-bottom: 2px solid #9C27B0;
+    background-color: transparent;
 }
 
 .checkbox-wrapper {
