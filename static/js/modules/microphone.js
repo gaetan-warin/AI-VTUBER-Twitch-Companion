@@ -1,7 +1,6 @@
-import { askAI } from './socket.js';
+import { socket } from './socket.js';
 import { areVoicesReady } from './speech.js';
 import { showNotification } from './ui.js';
-import { detectLanguage } from './languageDetection.js';
 
 export let microphonePermissionState = 'prompt';
 let recognition = null;
@@ -168,12 +167,11 @@ function initializeSpeechRecognition() {
     }
 
     recognition = new webkitSpeechRecognition();
-    recognition.continuous = false; // Changed to false to better handle language switching
+    recognition.continuous = false;
     recognition.interimResults = true;
     
-    // Initial language setup
-    const selectedLanguage = $('#fixedLanguage').val();
-    recognition.lang = selectedLanguage === 'auto' ? navigator.language || 'en-US' : getLangCode(selectedLanguage);
+    // Set language based on fixed selection
+    recognition.lang = getLangCode($('#fixedLanguage').val());
 
     recognition.onstart = () => {
         console.log('Speech recognition started with language:', recognition.lang);
@@ -190,17 +188,11 @@ function initializeSpeechRecognition() {
             
             if (text.trim()) {
                 const selectedLanguage = $('#fixedLanguage').val();
-                if (selectedLanguage === 'auto') {
-                    const detectedLang = detectLanguage(text);
-                    const newLangCode = getLangCode(detectedLang);
-                    
-                    if (newLangCode !== recognition.lang) {
-                        console.log(`Switching recognition language from ${recognition.lang} to ${newLangCode}`);
-                        recognition.lang = newLangCode;
-                        restartRecognition();
-                    }
-                }
-                askAI(text);
+                socket.emit('ask_ai', {
+                    text,
+                    source: 'microphone',
+                    fixedLanguage: selectedLanguage
+                });
             }
         }
     };

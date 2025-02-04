@@ -14,6 +14,7 @@ from flask_socketio import SocketIO
 from dotenv import load_dotenv, find_dotenv
 import ollama
 import logging
+from langdetect import detect
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True)
@@ -39,7 +40,7 @@ class Config:
             'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
             'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
             'DELIMITER_NAME', 'DELIMITER_NAME_END', 'SOCKETIO_IP', 'SOCKETIO_IP_PORT',
-            'SOCKETIO_CORS_ALLOWED', 'API_URL', 'API_URL_PORT', 'FIXED_LANGUAGE'
+            'SOCKETIO_CORS_ALLOWED', 'API_URL', 'API_URL_PORT', 'FIXED_LANGUAGE', 'VOICE_GENDER'
         ]
         self.load()
 
@@ -116,26 +117,66 @@ def get_ollama_models():
         logger.error(f"Error fetching Ollama models: {e}")
         return {'models': []}
 
-def process_ai_request(user_input):
-    if not user_input or not config.ollama_model:
-        return {'status': 'error', 'message': 'Invalid input or missing Ollama configuration'}, 400
+def process_ai_request(data):
+    text = data.get('text', '').strip()
+    source = data.get('source', 'twitch')
+    fixed_language = data.get('fixedLanguage')
 
-    sanitized_input = bleach.clean(user_input)
+    if not text:
+        return {'status': 'error', 'message': 'No text provided'}, 400
+
+    sanitized_input = bleach.clean(text)
+    
+    # Detect input language or use fixed language for microphone input
+    if source == 'microphone' and fixed_language:
+        detected_language = fixed_language
+    else:
+        try:
+            detected_language = detect(sanitized_input)
+        except:
+            detected_language = 'en'
+    
+    print(f"Using language: {detected_language}")
+
+    # Build language-specific prompt
+    language_instruction = f"Please respond in {detected_language} language. "
+
     structured_prompt = f"""
     Persona:
     Name: {config.persona_name}
     Role: {config.persona_role}
 
     Instructions:
-    {config.pre_prompt}
+    {language_instruction}{config.pre_prompt}
 
     User: {sanitized_input}
     """
 
     try:
-        response = ollama.chat(model=config.ollama_model, messages=[{"role": "user", "content": structured_prompt.strip()}])
-        cleaned_response = re.sub(r'<think>.*?</think>|\s+', ' ', response['message']['content'], flags=re.DOTALL).strip()
-        return {'status': 'success', 'message': cleaned_response}, 200
+        response = ollama.chat(
+            model=config.ollama_model, 
+            messages=[{"role": "user", "content": structured_prompt.strip()}]
+        )
+        
+        cleaned_response = re.sub(
+            r'<think>.*?</think>|\s+', 
+            ' ', 
+            response['message']['content'], 
+            flags=re.DOTALL
+        ).strip()
+
+        # Detect language of the response
+        try:
+            response_language = detect(cleaned_response)
+        except:
+            response_language = detected_language
+        print(f"response_language: {response_language}")
+        return {
+            'status': 'success',
+            'message': cleaned_response,
+            'language': response_language
+        }, 200
+
     except Exception as e:
         logger.error(f"AI processing error: {e}")
         return {'status': 'error', 'message': f'AI service error: {str(e)}'}, 500
@@ -163,13 +204,27 @@ def handle_disconnect():
 def handle_speak(data):
     text = data.get('text', '').strip()
     if text:
-        socketio.emit('speak_text', {'text': text})
+        try:
+            # Detect language of the text to speak
+            detected_language = detect(text)
+        except:
+            detected_language = 'en'
+
+        print(f"detected_language: {detected_language}")
+
+        socketio.emit('speak_text', {
+            'text': text,
+            'fixedLanguage': detected_language  # Use detected language instead of passed language
+        })
 
 @socketio.on('ask_ai')
 def handle_ask_ai(data):
-    response, status_code = process_ai_request(data.get('text', '').strip())
+    response, status_code = process_ai_request(data)
     if status_code == 200:
-        socketio.emit('ai_response', {'text': response['message']})
+        socketio.emit('ai_response', {
+            'text': response['message'],
+            'fixedLanguage': response['language']
+        })
 
 @socketio.on('save_config')
 def handle_save_config(data):
@@ -249,12 +304,17 @@ def handle_trigger_event(data):
 
 @socketio.on('trigger_ai_request')
 def handle_trigger_ai_request(data):
-    """Process AI requests and emit speech response."""
+    """Process AI requests from Twitch and emit speech response."""
     try:
-        user_input = data.get('message', '').strip()
-        response, status_code = process_ai_request(user_input)
+        response, status_code = process_ai_request({
+            'text': data.get('message', '').strip(),
+            'source': 'twitch'
+        })
         if status_code == 200:
-            socketio.emit('speak_text', {'text': response['message']})
+            socketio.emit('speak_text', {
+                'text': response['message'],
+                'fixedLanguage': response['language']
+            })
     except Exception as e:
         logger.error(f"AI request error: {e}")
         socketio.emit('ai_response_error', {'message': str(e)})

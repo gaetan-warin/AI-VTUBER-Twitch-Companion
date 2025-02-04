@@ -7,3 +7,4 @@ python-dotenv==0.21.1
 bleach==6.0.0
 ollama==0.1.0
 python-socketio==5.7.2
+langdetect==1.0.9

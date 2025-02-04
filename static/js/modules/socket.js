@@ -3,6 +3,7 @@ import { showQuestionDisplay, handleInitialConfig, handleSaveConfigResponse, han
 import { triggerFireworks } from './effects.js';
 import { loadAvatarModel } from './model.js';
 
+// Export the socket instance
 export const socket = io({
     transports: ['websocket'],
     reconnectionAttempts: 5,
@@ -64,10 +65,11 @@ export function saveConfig(configData) {
 
 export function emit(canal, data) {
     if (canal === 'speak' || canal === 'ask_ai') {
-        socket.emit(canal, {
+        const payload = {
             ...data,
-            fixedLanguage: $('#fixedLanguage').val()
-        });
+            source: data.fromMicrophone ? 'microphone' : 'text'
+        };
+        socket.emit(canal, payload);
     } else {
         socket.emit(canal, data);
     }

@@ -25,7 +25,7 @@ function setupEventListeners() {
         if (text) {
             emit(this.id === 'speakBtn' ? 'speak' : 'ask_ai', { 
                 text,
-                fixedLanguage: $('#fixedLanguage').val()
+                source: 'text'
             });
             $('#makeItSpeak').val('');
         }
@@ -121,12 +121,8 @@ function setupWaveToggle() {
 
 function setupLanguageControls() {
     $('#fixedLanguage').on('change', function() {
-        saveConfig(); // Save configuration when fixed language changes
+        saveConfig();
     });
-
-    // Add language mode to config save
-    const originalFields = config.fields;
-    config.fields = [...originalFields, 'FIXED_LANGUAGE'];
 }
 
 export function showNotification(type, message) {

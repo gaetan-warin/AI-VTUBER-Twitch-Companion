@@ -1,5 +1,3 @@
-import { detectLanguage } from './languageDetection.js';
-
 export const synth = window.speechSynthesis;
 export const mouthState = { value: 0 };
 let isSpeaking = false;
@@ -7,13 +5,24 @@ let voicesReady = false;
 let currentLanguage = 'en';
 const languageVoiceMap = {};
 
+// Add preferred voice mapping
+const preferredVoices = {
+    'en': {
+        female: 'Google UK English Female',      // Primary choice for English female
+        male: 'Google UK English Male'        // Primary choice for English male
+    },
+    'fr': {
+        female: 'Google français',
+        male: 'Microsoft Paul - French (France)'
+    }
+};
+
 export function initializeSpeech() {
     return new Promise((resolve) => {
         const checkVoices = () => {
             const voices = synth.getVoices();
             if (voices.length > 0) {
                 voicesReady = true;
-                console.log('Voices loaded:', voices);
                 mapVoicesToLanguages(voices);
                 resolve();
             } else {
@@ -42,14 +51,30 @@ function mapVoicesToLanguages(voices) {
 
 function getBestVoiceForLanguage(langCode) {
     const voices = languageVoiceMap[langCode] || languageVoiceMap['en'];
-    return voices.find(v => v.name.includes('Female')) || voices[0];
+    const preferredGender = $('#voiceGender').val() || 'female';
+    
+    // Try to find the preferred voice for the selected gender
+    if (preferredVoices[langCode]) {
+        const preferredName = preferredVoices[langCode][preferredGender];
+        const preferredVoice = voices.find(v => v.name.includes(preferredName));
+        if (preferredVoice) return preferredVoice;
+    }
+
+    // If preferred voice not found, try any voice with the selected gender
+    const genderVoice = voices.find(v => 
+        v.name.toLowerCase().includes(preferredGender)
+    );
+    if (genderVoice) return genderVoice;
+
+    // Finally, return the first available voice
+    return voices[0];
 }
 
 export function areVoicesReady() {
     return voicesReady;
 }
 
-export function speak(text, forcedLanguage = null) {
+export function speak(text, language = null) {
     if (!text || !voicesReady) {
         console.log("Voices not loaded yet.");
         return;
@@ -62,11 +87,8 @@ export function speak(text, forcedLanguage = null) {
         hideSpeechBubble();
     }
 
-    // Simplified language determination
-    currentLanguage = forcedLanguage || 
-                     $('#fixedLanguage').val() === 'auto' ? 
-                     detectLanguage(text) : 
-                     $('#fixedLanguage').val();
+    // Use provided language from backend or fallback to default
+    currentLanguage = language || 'en';
     console.log('Using language:', currentLanguage);
 
     const parts = text.split(/(\{\*\d+\*\})|([.!?]\s+)/).filter(Boolean);
