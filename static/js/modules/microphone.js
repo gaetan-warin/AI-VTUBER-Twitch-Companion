@@ -1,10 +1,12 @@
 import { askAI } from './socket.js';
 import { areVoicesReady } from './speech.js';
+import { showNotification } from './ui.js';
 
 export let microphonePermissionState = 'prompt';
 let recognition = null;
 let isRecording = false;
 let audioContext, audioInput, analyser;
+let recognitionTimeout;
 
 export function initializeMicrophone() {
     setupMicrophoneAccess();
@@ -83,10 +85,16 @@ export function setupMicrophoneAccess() {
 
 export function startRecording() {
     if (!areVoicesReady()) {
-        alert("Speech synthesis voices are not loaded yet. Please wait a moment and try again.");
+        showNotification('warning', "Speech synthesis voices are not loaded yet. Please wait a moment and try again.");
         return;
     }
     if (!recognition) initializeSpeechRecognition();
+    
+    if (isRecording) {
+        console.log('Recording is already in progress');
+        return;
+    }
+
     const selectedMicrophoneId = $('#preferredMicrophone').val();
     
     navigator.mediaDevices.getUserMedia({ 
@@ -94,23 +102,42 @@ export function startRecording() {
     })
     .then(stream => {
         initializeWaveVisualization(stream);
-        recognition.start();
-        isRecording = true;
-        $('#startRecordingBtn').text('Stop Recording').addClass('recording');
-        
-        if ($('#waveToggle').is(':checked')) {
-            $('#waveCanvas').show();
+        try {
+            recognition.start();
+            isRecording = true;
+            $('#startRecordingBtn').text('Stop Recording').addClass('recording');
+            
+            if ($('#waveToggle').is(':checked')) {
+                $('#waveCanvas').show();
+            }
+
+            showNotification('info', 'Recording started. Speak now.');
+
+            // Set a timeout to stop and restart recognition if no speech is detected
+            recognitionTimeout = setTimeout(() => {
+                if (isRecording) {
+                    recognition.stop();
+                    showNotification('warning', 'No speech detected. Restarting...');
+                }
+            }, 10000); // 10 seconds timeout
+        } catch (error) {
+            console.error('Error starting speech recognition:', error);
+            showNotification('error', 'Failed to start speech recognition. Please try again.');
         }
     })
     .catch(err => {
         console.error('Microphone access denied:', err);
-        alert('Failed to access the microphone. Please check your permissions.');
+        showNotification('error', 'Failed to access the microphone. Please check your permissions.');
     });
 }
 
 export function stopRecording() {
-    if (recognition) {
-        recognition.stop();
+    if (recognition && isRecording) {
+        try {
+            recognition.stop();
+        } catch (error) {
+            console.error('Error stopping speech recognition:', error);
+        }
         isRecording = false;
         $('#startRecordingBtn').text('Start Recording').removeClass('recording');
         $('#waveCanvas').hide();
@@ -119,6 +146,8 @@ export function stopRecording() {
             audioContext.close();
             audioContext = null;
         }
+
+        clearTimeout(recognitionTimeout);
     }
 }
 
@@ -152,29 +181,72 @@ export function updateMicrophoneList() {
 
 function initializeSpeechRecognition() {
     if (!('webkitSpeechRecognition' in window)) {
-        alert('Speech recognition is not supported in this browser.');
+        showNotification('error', 'Speech recognition is not supported in this browser.');
         return;
     }
 
     recognition = new webkitSpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
 
+    recognition.onstart = () => {
+        console.log('Speech recognition started');
+        showNotification('info', 'Listening... Speak now');
+    };
+
     recognition.onresult = (event) => {
-        const text = event.results[event.results.length - 1][0].transcript;
-        askAI(text);
+        clearTimeout(recognitionTimeout);
+        const result = event.results[event.results.length - 1];
+        if (result.isFinal) {
+            const text = result[0].transcript;
+            console.log('Speech recognized:', text);
+            if (text.trim()) {
+                askAI(text);
+            } else {
+                console.log('Empty speech detected');
+            }
+        } else {
+            console.log('Interim result:', result[0].transcript);
+        }
     };
 
     recognition.onend = () => {
+        console.log('Speech recognition ended');
+        clearTimeout(recognitionTimeout);
         if (isRecording) {
-            recognition.start();
+            try {
+                recognition.start();
+                console.log('Restarting speech recognition');
+                recognitionTimeout = setTimeout(() => {
+                    if (isRecording) {
+                        console.log('No speech detected for a while, restarting...');
+                        recognition.stop();
+                        showNotification('warning', 'No speech detected. Restarting...');
+                    }
+                }, 20000); // 10 seconds timeout
+            } catch (error) {
+                console.error('Error restarting speech recognition:', error);
+                isRecording = false;
+                $('#startRecordingBtn').text('Start Recording').removeClass('recording');
+                showNotification('error', 'Speech recognition stopped unexpectedly. Please start recording again.');
+            }
         }
     };
 
     recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
-        stopRecording();
+        if (event.error === 'no-speech') {
+            console.log('No speech detected, continuing to listen...');
+            showNotification('warning', 'No speech detected. Please try speaking again.');
+        } else {
+            showNotification('error', `Speech recognition error: ${event.error}`);
+        }
+        if (event.error === 'no-speech' || event.error === 'audio-capture') {
+            // Do nothing, let the onend event handler restart recognition
+        } else {
+            stopRecording();
+        }
     };
 }
 

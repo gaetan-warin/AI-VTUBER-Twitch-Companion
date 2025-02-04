@@ -1,9 +1,8 @@
-import { socket, emit } from './socket.js';
 import { startRecording, stopRecording, isCurrentlyRecording } from './microphone.js';
 import { loadAvatarModel, getModelPath } from './model.js';
 import { saveConfig, saveModalConfig, config, populateSelectElement } from './config.js';
 import { updateMicrophoneList } from './microphone.js';
-import { checkListenerStatus, startListener, stopListener } from './socket.js';
+import { checkListenerStatus, startListener, stopListener, emit } from './socket.js';
 import { areVoicesReady } from './speech.js';
 
 export function setupUI() {
@@ -46,7 +45,7 @@ function setupEventListeners() {
 
     $('#toggleSidebarBtn, #toggleSidebarBtnCollapsed').on('click', toggleSidebar);
     $('.tab-button').on('click', switchTab);
-    $('#saveConfigBtn').on('click', () => saveConfig(socket));
+    $('#saveConfigBtn').on('click', () => saveConfig());
     $('#configBtn').on('click', () => $('#configModal').show());
     $('.close').on('click', () => $('#configModal').hide());
     $(window).on('click', event => {

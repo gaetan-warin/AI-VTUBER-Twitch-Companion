@@ -58,7 +58,7 @@ export function populateSelectElement(selector, items) {
     return false;
 }
 
-export function saveConfig(socket) {
+export function saveConfig() {
     const configData = config.get();
     console.log("save config:", configData);
     emit('save_config', configData);
