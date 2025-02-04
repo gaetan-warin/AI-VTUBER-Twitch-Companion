@@ -5,25 +5,29 @@ export const config = {
         'AVATAR_MODEL', 'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'BACKGROUND_IMAGE',
         'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
         'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
-        'DELIMITER_NAME', 'DELIMITER_NAME_END', 'FIXED_LANGUAGE', 'VOICE_GENDER'
+        'DELIMITER_NAME', 'DELIMITER_NAME_END', 'FIXED_LANGUAGE', 'VOICE_GENDER', 'WAKE_WORD',
+        'WAKE_WORD_ENABLED'
     ],
     get() {
-        return this.fields.reduce((acc, field) => {
+        const configData = this.fields.reduce((acc, field) => {
             const $element = $(`#${this.snakeToCamelCase(field)}`);
             if ($element.length) {
-                const value = $element.val();
+                const value = $element.is(':checkbox') ? $element.is(':checked') : $element.val();
                 if (value !== undefined && value !== null) {
-                    acc[field] = value.trim();
+                    acc[field] = value;
                 }
             }
             return acc;
         }, {});
+        return configData;
     },
     set(data) {
         this.fields.forEach(field => {
             const $field = $(`#${this.snakeToCamelCase(field)}`);
-            if ($field.length && data[field]) {
-                if ($field.is('select')) {
+            if ($field.length && data[field] !== undefined) {
+                if ($field.is(':checkbox')) {
+                    $field.prop('checked', data[field]);
+                } else if ($field.is('select')) {
                     $field.val(data[field]).trigger('change');
                 } else {
                     $field.val(data[field]);

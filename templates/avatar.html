@@ -70,7 +70,7 @@
                             <label for="currentMicrophone">Current Microphone:</label>
                             <input type="text" id="currentMicrophone" readonly>
                         </div>
-                        <p class="microphone-instructions">To change:
+                        <p class="field-description">To change:
                             <br>1. Select the microphone you want as the default in your browser or system.
                             <br>2. Restart the browser (or reload the page) to apply changes.
                         </p>
@@ -78,6 +78,17 @@
                         <div class="checkbox-wrapper">
                             <input type="checkbox" id="waveToggle" checked>
                             <label for="waveToggle">Show Wave Animation</label>
+                        </div>
+                        <div class="settings-group">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="wakeWordEnabled" checked>
+                                <label for="wakeWordEnabled">Enable Wake Word Detection</label>
+                            </div>
+                            <div id="wakeWordContainer">
+                                <label for="wakeWord">Wake Word:</label>
+                                <input type="text" id="wakeWord" value="Hey Sarah" placeholder="e.g., Hey Sarah">
+                                <p class="field-description">The bot will only respond to voice commands when this word is spoken. Keep it simple to detect.</p>
+                            </div>
                         </div>
                     </div>
 

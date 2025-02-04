@@ -11,6 +11,7 @@ export function setupUI() {
     setupTwitchFields();
     setupRecordingButton();
     setupWaveToggle();
+    setupWakeWordToggle();
     $('#waveCanvas').hide();
 }
 
@@ -118,6 +119,18 @@ function setupWaveToggle() {
     });
 }
 
+function setupWakeWordToggle() {
+    const $container = $('#wakeWordContainer');
+    const $checkbox = $('#wakeWordEnabled');
+
+    function updateWakeWordVisibility() {
+        $container.toggle($checkbox.is(':checked'));
+    }
+
+    $checkbox.on('change', updateWakeWordVisibility);
+    updateWakeWordVisibility(); // Call this immediately to set initial state
+}
+
 export function showNotification(type, message) {
     const notification = $('#notification');
     notification.text(message).attr('class', `notification ${type}`).addClass('show');
@@ -155,9 +168,12 @@ export function handleInitialConfig(data) {
                 config.set(configData);
                 
                 // Set fixed language if available
-                if (configData.fixedLanguage) {
+                if (configData.FIXED_LANGUAGE) {
                     $('#fixedLanguage').val(configData.FIXED_LANGUAGE);
                 }
+                
+                // Update wake word visibility based on loaded config
+                setupWakeWordToggle();
                 
                 checkListenerStatus();
             })

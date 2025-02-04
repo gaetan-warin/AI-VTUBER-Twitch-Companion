@@ -480,6 +480,7 @@ button:hover {
 }
 
 .notification.show {
+    background-color: #333;
     top: 20px;
     opacity: 1;
     visibility: visible;
@@ -688,3 +689,21 @@ button:hover {
     margin: 0;
     font-size: 14px;
 }
+
+.field-description {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+    margin-bottom: 12px;
+    font-style: italic;
+}
+
+#wakeWordContainer {
+    margin-top: 10px;
+    transition: opacity 0.3s ease, height 0.3s ease;
+}
+
+#wakeWordContainer.hidden {
+    display: none;
+}
+

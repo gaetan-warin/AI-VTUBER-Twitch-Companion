@@ -170,7 +170,6 @@ function initializeSpeechRecognition() {
     recognition.continuous = false;
     recognition.interimResults = true;
     
-    // Set language based on fixed selection
     recognition.lang = getLangCode($('#fixedLanguage').val());
 
     recognition.onstart = () => {
@@ -183,16 +182,27 @@ function initializeSpeechRecognition() {
         const result = event.results[event.results.length - 1];
         
         if (result.isFinal) {
-            const text = result[0].transcript;
+            const text = result[0].transcript.trim();
             console.log('Speech recognized:', text);
             
-            if (text.trim()) {
-                const selectedLanguage = $('#fixedLanguage').val();
-                socket.emit('ask_ai', {
-                    text,
-                    source: 'microphone',
-                    fixedLanguage: selectedLanguage
-                });
+            if (text) {
+                const isWakeWordEnabled = $('#wakeWordEnabled').is(':checked');
+                const wakeWord = $('#wakeWord').val().trim().toLowerCase();
+                const textLower = text.toLowerCase();
+
+                // Process command with improved wake word detection
+                if (!isWakeWordEnabled || (wakeWord && isWakeWordDetected(textLower, wakeWord))) {
+                    // Send the full text as command, no wake word removal
+                    const selectedLanguage = $('#fixedLanguage').val();
+                    socket.emit('ask_ai', {
+                        text: text, // Use full text including wake word
+                        source: 'microphone',
+                        fixedLanguage: selectedLanguage
+                    });
+                    console.log('Wake word detected, processing command:', text);
+                } else {
+                    console.log('No wake word detected in:', text);
+                }
             }
         }
     };
@@ -219,6 +229,26 @@ function initializeSpeechRecognition() {
             stopRecording();
         }
     };
+}
+
+// Add this new function for better wake word detection
+function isWakeWordDetected(text, wakeWord) {
+    // Handle multiple word variations
+    const normalizedText = text.replace(/[.,!?]/g, '').toLowerCase();
+    const normalizedWakeWord = wakeWord.replace(/[.,!?]/g, '').toLowerCase();
+    
+    // Split wake word into parts for more flexible matching
+    const wakeWordParts = normalizedWakeWord.split(' ');
+    
+    // Check if all parts of wake word are present in correct order
+    if (wakeWordParts.length > 1) {
+        // For multi-word wake phrases
+        return normalizedText.includes(normalizedWakeWord);
+    } else {
+        // For single-word wake words, use word boundary check
+        const wordBoundaryPattern = new RegExp(`\\b${normalizedWakeWord}\\b`);
+        return wordBoundaryPattern.test(normalizedText);
+    }
 }
 
 function restartRecognition() {
