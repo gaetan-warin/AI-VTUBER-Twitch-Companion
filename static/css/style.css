@@ -376,6 +376,7 @@ button:hover {
 }
 
 .settings-section {
+    position: relative;
     background: rgba(255, 255, 255, 0.95);
     padding: 15px;
     margin-bottom: 15px;
@@ -633,4 +634,39 @@ button:hover {
 /* Hover effect */
 .checkbox-wrapper:hover {
     border-color: var(--primary-color);
+}
+
+/* Microphone overlay styles */
+.microphone-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 20px;
+    border-radius: 8px;
+    z-index: 2;
+}
+
+.microphone-overlay button {
+    background: var(--accent-color);
+    padding: 12px 24px;
+    border-radius: 6px;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.microphone-overlay p {
+    text-align: center;
+    color: #666;
+    margin: 0;
+    font-size: 14px;
 }

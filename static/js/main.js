@@ -4,6 +4,7 @@ const mouthState = { value: 0 };
 let isSpeaking = false;
 let voicesReady = false;
 let currentModel = null;
+let microphonePermissionState = 'prompt'; // Can be 'prompt', 'granted', or 'denied'
 
 // WebSocket configuration
 const socket = io({
@@ -375,6 +376,79 @@ function stopRecording() {
     }
 }
 
+function checkMicrophoneAccess() {
+    // Show overlay by default until we know the permission state
+    $('#microphoneOverlay').show();
+    
+    navigator.permissions.query({ name: 'microphone' })
+        .then(permissionStatus => {
+            microphonePermissionState = permissionStatus.state;
+            
+            if (permissionStatus.state === 'granted') {
+                $('#microphoneOverlay').hide();
+                updateMicrophoneList();
+            } else {
+                $('#microphoneOverlay').show();
+                if (permissionStatus.state === 'prompt') {
+                    $('#microphoneOverlay p').text('Microphone access is required for this feature');
+                } else {
+                    $('#microphoneOverlay p').text('Microphone access was denied. Please enable it in your browser settings.');
+                }
+            }
+
+            // Listen for changes in permission
+            permissionStatus.onchange = () => {
+                microphonePermissionState = permissionStatus.state;
+                if (permissionStatus.state === 'granted') {
+                    $('#microphoneOverlay').hide();
+                    updateMicrophoneList();
+                } else {
+                    $('#microphoneOverlay').show();
+                    $('#microphoneOverlay p').text('Microphone access was denied. Please enable it in your browser settings.');
+                }
+            };
+        })
+        .catch(err => {
+            console.error('Error checking microphone permission:', err);
+            $('#microphoneOverlay').show();
+        });
+}
+
+function setupMicrophoneAccess() {
+    $('#requestMicrophoneAccess').on('click', () => {
+        if (microphonePermissionState === 'denied') {
+            alert('Please enable microphone access in your browser settings and reload the page.');
+            return;
+        }
+
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                stream.getTracks().forEach(track => track.stop());
+                microphonePermissionState = 'granted';
+                $('#microphoneOverlay').hide();
+                
+                // Update microphone list and select the authorized device
+                updateMicrophoneList().then(() => {
+                    navigator.mediaDevices.enumerateDevices().then(devices => {
+                        const audioDevices = devices.filter(device => device.kind === 'audioinput');
+                        if (audioDevices.length > 0) {
+                            const defaultDevice = audioDevices.find(device => device.deviceId === 'default') 
+                                             || audioDevices.find(device => device.label.toLowerCase().includes('default'))
+                                             || audioDevices[0];
+                            
+                            $('#preferredMicrophone').val(defaultDevice.deviceId);
+                        }
+                    });
+                });
+            })
+            .catch(err => {
+                console.error('Failed to get microphone access:', err);
+                microphonePermissionState = 'denied';
+                $('#microphoneOverlay p').text('Microphone access was denied. Please enable it in your browser settings.');
+            });
+    });
+}
+
 function updateMicrophoneList() {
     const micSelect = $('#preferredMicrophone');
     const currentSelection = micSelect.val();
@@ -382,18 +456,23 @@ function updateMicrophoneList() {
 
     return navigator.mediaDevices.enumerateDevices()
         .then(devices => {
-            devices.forEach(device => {
-                if (device.kind === 'audioinput') {
-                    micSelect.append(new Option(device.label || `Microphone ${micSelect.children().length + 1}`, device.deviceId));
-                }
+            const audioDevices = devices.filter(device => device.kind === 'audioinput');
+            if (audioDevices.length === 0) {
+                $('#microphoneOverlay').show();
+                return;
+            }
+
+            audioDevices.forEach(device => {
+                micSelect.append(new Option(device.label || `Microphone ${micSelect.children().length + 1}`, device.deviceId));
             });
-            // Restore the previous selection if it still exists
+            
             if (currentSelection && micSelect.find(`option[value="${currentSelection}"]`).length) {
                 micSelect.val(currentSelection);
             }
         })
         .catch(err => {
             console.error('Error accessing media devices:', err);
+            $('#microphoneOverlay').show();
             throw err;
         });
 }
@@ -485,6 +564,8 @@ function setupEventListeners() {
             }
         }
     });
+
+    setupMicrophoneAccess();
 }
 
 function initializeApp() {
@@ -639,4 +720,5 @@ $(document).ready(() => {
     socket.connect();
     initializeApp();
     $('#waveCanvas').hide();
+    checkMicrophoneAccess();
 });
