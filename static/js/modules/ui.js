@@ -12,7 +12,6 @@ export function setupUI() {
     setupRecordingButton();
     setupWaveToggle();
     $('#waveCanvas').hide();
-    setupLanguageControls();
 }
 
 function setupEventListeners() {
@@ -116,12 +115,6 @@ function setupWaveToggle() {
         if (isCurrentlyRecording()) {
             $('#waveCanvas').toggle($(this).is(':checked'));
         }
-    });
-}
-
-function setupLanguageControls() {
-    $('#fixedLanguage').on('change', function() {
-        saveConfig();
     });
 }
 
