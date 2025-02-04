@@ -14,6 +14,7 @@ export function setupUI() {
     setupRecordingButton();
     setupMicrophoneSelection();
     setupWaveToggle();
+    $('#waveCanvas').hide();
 }
 
 function setupEventListeners() {

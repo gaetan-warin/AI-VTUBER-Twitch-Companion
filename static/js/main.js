@@ -13,11 +13,8 @@ async function initializeApp() {
     initializeModel();
     initializeEffects();
     getInitialConfig();
+    checkMicrophoneAccess();
 }
 
 // Initial setup
-$(document).ready(() => {
-    initializeApp();
-    $('#waveCanvas').hide();
-    checkMicrophoneAccess();
-});
+$(document).ready(() => initializeApp());
