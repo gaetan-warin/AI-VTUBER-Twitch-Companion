@@ -374,7 +374,7 @@ button:hover {
     padding-right: 15px;
     margin-bottom: 20px;
 }
-
+    
 .settings-section {
     position: relative;
     background: rgba(255, 255, 255, 0.95);
@@ -383,6 +383,10 @@ button:hover {
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     border: 1px solid #ddd;
+}
+
+.modal .settings-section {
+    padding: 15px 33px 15px 15px;
 }
 
 .settings-section h3 {
@@ -513,12 +517,25 @@ button:hover {
 
 .modal-content {
     background-color: #fefefe;
-    margin: 15% auto;
+    margin: 2% auto; /* Changed from 15% to 2% to position it near the top */
     padding: 20px;
     border: 1px solid #888;
     width: 80%;
     max-width: 600px;
     border-radius: 10px;
+    animation: slideDown 0.3s ease-out; /* Added animation for smooth entry */
+}
+
+/* Add animation keyframes */
+@keyframes slideDown {
+    from {
+        transform: translateY(-100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .close {
@@ -550,7 +567,7 @@ button:hover {
 }
 
 .settings-group {
-    margin-bottom: 15px;
+    margin-bottom: -10px;
 }
 
 #startRecordingBtn {
@@ -614,7 +631,6 @@ button:hover {
     display: flex;
     align-items: center;
     width: 100%;
-    padding: 8px;
     border-radius: 4px;
     background-color: white;
 }
