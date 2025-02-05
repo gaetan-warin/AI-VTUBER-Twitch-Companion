@@ -165,15 +165,20 @@ export function handleInitialConfig(data) {
         Promise.all(populationPromises)
             .then(() => {
                 console.log('All fields populated');
+                // Set configuration before other UI updates
                 config.set(configData);
+                
+                // Explicitly set wake word checkbox state
+                const $wakeWordCheckbox = $('#wakeWordEnabled');
+                $wakeWordCheckbox.prop('checked', configData.WAKE_WORD_ENABLED === true);
+                
+                // Update wake word container visibility
+                $('#wakeWordContainer').toggle($wakeWordCheckbox.is(':checked'));
                 
                 // Set fixed language if available
                 if (configData.FIXED_LANGUAGE) {
                     $('#fixedLanguage').val(configData.FIXED_LANGUAGE);
                 }
-                
-                // Update wake word visibility based on loaded config
-                setupWakeWordToggle();
                 
                 checkListenerStatus();
             })
