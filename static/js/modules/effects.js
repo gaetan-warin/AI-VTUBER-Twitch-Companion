@@ -1,9 +1,15 @@
 let celebrationAudio;
 
 export function initializeEffects() {
-    celebrationAudio = new Audio('static/mp3/success.mp3');
+    celebrationAudio = new Audio();
     celebrationAudio.volume = 0.3;
     celebrationAudio.preload = 'auto';
+    updateCelebrationSound();
+}
+
+export function updateCelebrationSound() {
+    const soundFile = $('#celebrateSound').val() || 'success.mp3';
+    celebrationAudio.src = `static/mp3/${soundFile}`;
 }
 
 export function triggerFireworks() {

@@ -158,10 +158,24 @@ button:hover {
 .button-group-inline {
     display: flex;
     gap: 10px;
+    margin: 10px 0;
 }
 
 .button-group-inline button {
     flex: 1;
+}
+
+#testFollowBtn, #testSubBtn {
+    padding: 5px 10px;
+    background-color: #2c2c2c;
+    color: white;
+    border: 1px solid #444;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#testFollowBtn:hover, #testSubBtn:hover {
+    background-color: #3c3c3c;
 }
 
 .question-display {

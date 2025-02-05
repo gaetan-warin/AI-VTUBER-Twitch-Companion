@@ -43,7 +43,7 @@ class Config:
             'DELIMITER_NAME', 'DELIMITER_NAME_END', 'SOCKETIO_IP', 'SOCKETIO_IP_PORT',
             'SOCKETIO_CORS_ALLOWED', 'API_URL', 'API_URL_PORT', 'FIXED_LANGUAGE', 'VOICE_GENDER',
             'WAKE_WORD', 'WAKE_WORD_ENABLED', 'CELEBRATE_FOLLOW', 'CELEBRATE_SUB',
-            'CELEBRATE_FOLLOW_MESSAGE', 'CELEBRATE_SUB_MESSAGE'
+            'CELEBRATE_FOLLOW_MESSAGE', 'CELEBRATE_SUB_MESSAGE', 'CELEBRATE_SOUND'
         ]
         self.load()
 
@@ -119,6 +119,15 @@ def get_ollama_models():
     except Exception as e:
         logger.error(f"Error fetching Ollama models: {e}")
         return {'models': []}
+
+def get_celebration_sounds():
+    """Get list of available celebration sound files."""
+    sounds_dir = os.path.join(app.root_path, 'static', 'mp3')
+    try:
+        return {'sounds': [f for f in os.listdir(sounds_dir) if f.endswith('.mp3')]}
+    except OSError as e:
+        logger.error(f"Error accessing sounds directory: {e}")
+        return {'sounds': []}
 
 def process_ai_request(data):
     print(f"Processing AI request: {data}")
@@ -267,7 +276,8 @@ def handle_get_init_cfg():
                 'config': config.to_dict(),
                 'avatarList': get_avatar_models().get('models', []),
                 'backgroundList': get_background_images().get('images', []),
-                'ollamaModelList': get_ollama_models().get('models', [])
+                'ollamaModelList': get_ollama_models().get('models', []),
+                'soundsList': get_celebration_sounds().get('sounds', [])
             }
         })
     except Exception as e:

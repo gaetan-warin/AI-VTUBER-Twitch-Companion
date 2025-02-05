@@ -3,6 +3,7 @@ import { loadAvatarModel, getModelPath } from './model.js';
 import { saveConfig, saveModalConfig, config, populateSelectElement } from './config.js';
 import { checkListenerStatus, startListener, stopListener, emit } from './socket.js';
 import { areVoicesReady } from './speech.js';
+import { updateCelebrationSound } from './effects.js';
 
 export function setupUI() {
     setupEventListeners();
@@ -60,6 +61,22 @@ function setupEventListeners() {
 
     $('#startListenerBtn').on('click', startListener);
     $('#stopListenerBtn').on('click', stopListener);
+    $('#celebrateSound').on('change', updateCelebrationSound);
+
+    // Add test celebration buttons handlers
+    $('#testFollowBtn').on('click', () => {
+        emit('trigger_event', {
+            event_type: 'follow',
+            username: 'TestUser'
+        });
+    });
+    
+    $('#testSubBtn').on('click', () => {
+        emit('trigger_event', {
+            event_type: 'sub',
+            username: 'TestUser'
+        });
+    });
 }
 
 function toggleSidebar() {
@@ -154,12 +171,13 @@ export function updateListenerStatus(status) {
 export function handleInitialConfig(data) {
     console.log("Received initial configuration:", data);
     if (data.status === 'success') {
-        const { config: configData, avatarList, backgroundList, ollamaModelList } = data.data;
+        const { config: configData, avatarList, backgroundList, ollamaModelList, soundsList } = data.data;
 
         const populationPromises = [
             populateSelectElement('#avatarModel', avatarList),
             populateSelectElement('#backgroundImage', backgroundList),
             populateSelectElement('#ollamaModel', ollamaModelList),
+            populateSelectElement('#celebrateSound', soundsList),
         ];
 
         Promise.all(populationPromises)
