@@ -1,11 +1,12 @@
 V1.0 Web working minimal
-    UI CFG => Work better on persona
+    UI CFG => Work better on persona structure pre-prompt. Find tips, rag ?
     Big refactor / cleaning
     Update .env.example & Readme with new info
 
 V1.1 Web improvement
     Add Twitch auto connect to get Twitch Token and Twitch Client ID
-    Twitch => Regarding the person who send the message he should be able to manage to keep conversation or switch subject.
+    Improve mouth move
+    Twitch => Regarding the person who send the message he should be able to manage to keep conversation or switch subject. How to track history.
     
 V2.0 Companion as an app
     Companion as an APP => Electron JS instead of Web Browser,
