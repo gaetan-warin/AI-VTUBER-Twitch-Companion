@@ -9,6 +9,7 @@ import re
 import eventlet
 import bleach
 import subprocess
+import time
 from flask import Flask, render_template, send_from_directory, abort
 from flask_socketio import SocketIO
 from dotenv import load_dotenv, find_dotenv
@@ -119,6 +120,8 @@ def get_ollama_models():
         return {'models': []}
 
 def process_ai_request(data):
+    print(f"Processing AI request: {data}")
+    start_time = time.time()
     text = data.get('text', '').strip()
     source = data.get('source', 'twitch')
     fixed_language = data.get('fixedLanguage')
@@ -154,10 +157,12 @@ def process_ai_request(data):
     """
 
     try:
+        ollama_start_time = time.time()
         response = ollama.chat(
             model=config.ollama_model, 
             messages=[{"role": "user", "content": structured_prompt.strip()}]
         )
+        ollama_time = time.time() - ollama_start_time
         
         cleaned_response = re.sub(
             r'<think>.*?</think>|\s+', 
@@ -171,7 +176,13 @@ def process_ai_request(data):
             response_language = detect(cleaned_response)
         except:
             response_language = detected_language
-        print(f"response_language: {response_language}")
+
+        total_time = time.time() - start_time
+        print(f"AI Processing Times:")
+        print(f"  - Model call: {config.ollama_model}")
+        print(f"  - Ollama API call: {ollama_time:.2f} seconds")
+        print(f"  - Total processing: {total_time:.2f} seconds")
+        
         return {
             'status': 'success',
             'message': cleaned_response,
@@ -179,7 +190,8 @@ def process_ai_request(data):
         }, 200
 
     except Exception as e:
-        logger.error(f"AI processing error: {e}")
+        total_time = time.time() - start_time
+        logger.error(f"AI processing error ({total_time:.2f} seconds): {e}")
         return {'status': 'error', 'message': f'AI service error: {str(e)}'}, 500
 
 def emit_celebration_event(event_type, username):
