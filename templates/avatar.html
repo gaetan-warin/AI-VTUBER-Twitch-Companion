@@ -146,6 +146,7 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2>Edit Configuration</h2>
+            <p class="field-description">You should restart the listener to take into account these new values.</p>
             <div class="settings-section">
                 <h3>Bot Behavior</h3>
                 <label for="extraDelayListener">Extra Delay Listener:</label>
@@ -157,14 +158,6 @@
                 <h3>Follow/Sub Settings</h3>
                 <label for="botNameFollowSub">Follow/Sub Bot Name:</label>
                 <input type="text" id="botNameFollowSub" value="wizebot">
-                <div class="checkbox-wrapper">
-                    <input type="checkbox" id="celebrateFollow" checked>
-                    <label for="celebrateFollow">Celebrate New Follows</label>
-                </div>
-                <div class="checkbox-wrapper">
-                    <input type="checkbox" id="celebrateSub" checked>
-                    <label for="celebrateSub">Celebrate New Subscriptions</label>
-                </div>
                 <label for="keyWordFollow">Follow Keyword:</label>
                 <input type="text" id="keyWordFollow" value="New FOLLOW(S)">
                 <label for="keyWordSub">Sub Keyword:</label>
@@ -173,6 +166,18 @@
                 <input type="text" id="delimiterName" value="{">
                 <label for="delimiterNameEnd">Name Delimiter End:</label>
                 <input type="text" id="delimiterNameEnd" value="}">
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" id="celebrateFollow" checked>
+                    <label for="celebrateFollow">Celebrate New Follows</label>
+                </div>
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" id="celebrateSub" checked>
+                    <label for="celebrateSub">Celebrate New Subscriptions</label>
+                </div>
+                <label for="celebrateFollowMessage">Follow Celebration Message: <span class="field-description">(pseudo of follower say at the end of message)</span></label>
+                <input type="text" id="celebrateFollowMessage" value="Wonderful, we have a new follower" placeholder="Message for new followers">
+                <label for="celebrateSubMessage">Sub Celebration Message:  <span class="field-description">(pseudo of subscriber say at the end of message)</span></label>
+                <input type="text" id="celebrateSubMessage" value="Incredible, we have a new subscriber" placeholder="Message for new subscribers">
             </div>
             <div class="settings-section">
                 <h3>Twitch Connection</h3>

@@ -26,7 +26,8 @@ class Config:
         self.fields = [
             'TWITCH_TOKEN', 'CLIENT_ID', 'CHANNEL_NAME', 'EXTRA_DELAY_LISTENER',
             'NB_SPAM_MESSAGE', 'API_URL', 'API_URL_PORT', 'BOT_NAME_FOLLOW_SUB',
-            'KEY_WORD_FOLLOW', 'KEY_WORD_SUB', 'DELIMITER_NAME', 'DELIMITER_NAME_END'
+            'KEY_WORD_FOLLOW', 'KEY_WORD_SUB', 'DELIMITER_NAME', 'DELIMITER_NAME_END',
+            'CELEBRATE_FOLLOW_MESSAGE', 'CELEBRATE_SUB_MESSAGE'
         ]
         self.load()
 
@@ -108,8 +109,15 @@ class TwitchBot(commands.Bot):
 
     def _emit_celebration(self, event_type, content):
         name = content.split(config.delimiter_name)[1].split(config.delimiter_name_end)[0]
-        text = f"{'Wonderful, we have a new follower' if event_type == 'follow' else 'Incredible, we have a new subscriber'}. Thank you: {name}"
-        socket.emit('speak', {'text': text})
+        print(config.celebrate_follow_message)
+        print(config.celebrate_sub_message)
+        # Use custom messages from config
+        if event_type == 'follow':
+            message = f"{config.celebrate_follow_message} {name}"
+        else:  # sub event
+            message = f"{config.celebrate_sub_message} {name}"
+
+        socket.emit('speak', {'text': message})
         socket.emit('trigger_event', {'event_type': event_type, 'username': name})
 
     async def _handle_user_message(self, message):
