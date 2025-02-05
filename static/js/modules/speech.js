@@ -162,16 +162,9 @@ export function stopMouthAnimation() {
 }
 
 function showSpeechBubble(text) {
-    const bubble = $('#speech-bubble');
-    bubble.text(text).show();
-    if (window.currentModel) {
-        const bounds = window.currentModel.getBounds();
-        const x = window.innerWidth / 2;
-        const y = (window.innerHeight / 2) - bounds.height / 2 - 50;
-        bubble.css({
-            left: `${x - bubble.outerWidth() / 2}px`,
-            top: `${y}px`
-        });
+    if ($('#speechBubbleEnabled').is(':checked')) {
+        const bubble = $('#speech-bubble');
+        bubble.text(text).show();
     }
 }
 

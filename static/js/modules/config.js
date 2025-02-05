@@ -7,7 +7,7 @@ export const config = {
         'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
         'DELIMITER_NAME', 'DELIMITER_NAME_END', 'FIXED_LANGUAGE', 'VOICE_GENDER', 'WAKE_WORD',
         'WAKE_WORD_ENABLED', 'CELEBRATE_FOLLOW', 'CELEBRATE_SUB', 'CELEBRATE_FOLLOW_MESSAGE', 
-        'CELEBRATE_SUB_MESSAGE', 'CELEBRATE_SOUND'
+        'CELEBRATE_SUB_MESSAGE', 'CELEBRATE_SOUND', 'SPEECH_BUBBLE_ENABLED'
     ],
     get() {
         const configData = this.fields.reduce((acc, field) => {
@@ -66,6 +66,7 @@ export function populateSelectElement(selector, items) {
 
 export function saveConfig() {
     const configData = config.get();
+    configData.SPEECH_BUBBLE_ENABLED = $('#speechBubbleEnabled').is(':checked');
     console.log("save config:", configData);
     emit('save_config', configData);
 }
@@ -73,4 +74,9 @@ export function saveConfig() {
 export function saveModalConfig() {
     $('#configModal').hide();
     saveConfig();
+}
+
+export function loadConfig(data) {
+    config.set(data);
+    $('#speechBubbleEnabled').prop('checked', data.SPEECH_BUBBLE_ENABLED === 'True' || data.SPEECH_BUBBLE_ENABLED === true);
 }

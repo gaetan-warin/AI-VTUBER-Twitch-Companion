@@ -98,6 +98,7 @@ button:hover {
 
 .speech-bubble {
     position: fixed;
+    top: 30px;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     border-radius: 20px;
     padding: 15px 25px;
