@@ -1,11 +1,9 @@
 V1.0 Web working minimal
     UI CFG => Work better on persona
-    UI CFG => Activate or desactivate bubble when bot speaking
-    Add tab about
+    Big refactor / cleaning
     Update .env.example & Readme with new info
 
 V1.1 Web improvement
-    Big refactor / cleaning
     Add Twitch auto connect to get Twitch Token and Twitch Client ID
     Twitch => Regarding the person who send the message he should be able to manage to keep conversation or switch subject.
     

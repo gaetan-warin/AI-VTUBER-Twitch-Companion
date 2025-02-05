@@ -722,3 +722,81 @@ button:hover {
     display: none;
 }
 
+.link-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.link-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#aboutInfo {
+    height: 150px;
+    margin-bottom: 15px;
+    resize: vertical;
+}
+
+#aboutAuthor {
+    margin-bottom: 15px;
+}
+
+.about-content {
+    padding: 10px;
+    color: #333;
+}
+
+.about-content h4 {
+    color: var(--primary-color);
+    margin: 20px 0 10px 0;
+    font-size: 16px;
+}
+
+.about-content p {
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+.about-content ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 10px 0;
+}
+
+.about-content ul li {
+    padding: 5px 0;
+    padding-left: 20px;
+    position: relative;
+}
+
+.about-content ul li:before {
+    content: '•';
+    color: var(--primary-color);
+    position: absolute;
+    left: 0;
+}
+
+.about-links {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.about-links a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.about-links a:hover {
+    color: #45a049;
+    text-decoration: underline;
+}
+
