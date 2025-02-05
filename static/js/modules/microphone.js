@@ -82,42 +82,86 @@ export function startRecording() {
         return;
     }
 
-    navigator.mediaDevices.getUserMedia({ 
-        audio: { 
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true 
-        } 
-    })
-    .then(stream => {
-        initializeWaveVisualization(stream);
-        try {
-            recognition.start();
-            isRecording = true;
-            $('#startRecordingBtn').text('Stop Recording').addClass('recording');
+    // First check if we have permission
+    navigator.permissions.query({ name: 'microphone' })
+        .then(permissionStatus => {
+            if (permissionStatus.state === 'denied') {
+                showNotification('error', 'Microphone access is denied. Please enable it in your browser settings.');
+                return;
+            }
             
-            if ($('#waveToggle').is(':checked')) {
-                $('#waveCanvas').show();
+            // Try to get microphone access
+            return navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    channelCount: 1
+                } 
+            });
+        })
+        .then(stream => {
+            if (!stream) {
+                throw new Error('No audio stream available');
             }
 
-            showNotification('info', 'Recording started. Speak now.');
-
-            // Set a timeout to stop and restart recognition if no speech is detected
-            recognitionTimeout = setTimeout(() => {
-                if (isRecording) {
-                    recognition.stop();
-                    showNotification('warning', 'No speech detected. Restarting...');
+            console.log('Microphone access granted, initializing audio context...');
+            
+            // Create new audio context
+            if (audioContext) {
+                audioContext.close();
+            }
+            
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                audioInput = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                
+                // Connect audio nodes for visualization
+                audioInput.connect(analyser);
+                
+                console.log('Audio context initialized successfully');
+                
+                // Start recognition
+                recognition.start();
+                isRecording = true;
+                $('#startRecordingBtn').text('Stop Recording').addClass('recording');
+                
+                if ($('#waveToggle').is(':checked')) {
+                    $('#waveCanvas').show();
                 }
-            }, 10000); // 10 seconds timeout
-        } catch (error) {
-            console.error('Error starting speech recognition:', error);
-            showNotification('error', 'Failed to start speech recognition. Please try again.');
-        }
-    })
-    .catch(err => {
-        console.error('Microphone access denied:', err);
-        showNotification('error', 'Failed to access the microphone. Please check your permissions.');
-    });
+                
+                showNotification('info', 'Recording started. Speak now.');
+                
+                // Initialize visualization
+                initializeWaveVisualization(stream);
+                
+                // Set timeout for no speech detection
+                recognitionTimeout = setTimeout(() => {
+                    if (isRecording) {
+                        recognition.stop();
+                        showNotification('warning', 'No speech detected. Restarting...');
+                    }
+                }, 10000);
+                
+            } catch (err) {
+                console.error('Audio context initialization error:', err);
+                throw new Error('Failed to initialize audio processing');
+            }
+        })
+        .catch(err => {
+            console.error('Detailed microphone access error:', err);
+            
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                showNotification('error', 'Microphone access was denied. Please allow microphone access in your browser settings.');
+            } else if (err.name === 'NotFoundError') {
+                showNotification('error', 'No microphone found. Please connect a microphone and try again.');
+            } else {
+                showNotification('error', `Microphone error: ${err.message || 'Unknown error'}`);
+            }
+            
+            stopRecording();
+        });
 }
 
 export function stopRecording() {
@@ -299,12 +343,13 @@ function initializeWaveVisualization(stream) {
         return;
     }
 
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    audioInput = audioContext.createMediaStreamSource(stream);
-    analyser = audioContext.createAnalyser();
-    audioInput.connect(analyser);
-
-    drawSpectrum(analyser);
+    try {
+        analyser.fftSize = 256;
+        drawSpectrum(analyser);
+        console.log('Wave visualization initialized');
+    } catch (err) {
+        console.error('Wave visualization error:', err);
+    }
 }
 
 function drawSpectrum(analyser) {
