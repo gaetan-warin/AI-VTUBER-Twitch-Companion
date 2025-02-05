@@ -278,20 +278,53 @@ def handle_get_listener_status():
     status = 'running' if listener_process and listener_process.poll() is None else 'stopped'
     socketio.emit('listener_status', {'status': status})
 
+def get_python_executable():
+    """Get the appropriate Python executable path."""
+    venv_python = os.path.join(app.root_path, 'venv', 'Scripts', 'python.exe')
+    if os.path.exists(venv_python):
+        logger.info("Using venv Python: %s", venv_python)
+        return venv_python
+    
+    # Try system Python paths
+    system_paths = ['python', 'python3', 'py']
+    for cmd in system_paths:
+        try:
+            subprocess.run([cmd, '--version'], capture_output=True, check=True)
+            logger.info("Using system Python: %s", cmd)
+            return cmd
+        except (subprocess.SubprocessError, FileNotFoundError):
+            continue
+    
+    logger.error("No Python executable found")
+    raise RuntimeError("No Python executable found in venv or system path")
+
 @socketio.on('start_listener')
 def handle_start_listener():
     global listener_process
     if not listener_process:
         try:
             listener_dir = os.path.join(app.root_path, 'listener')
-            venv_python = os.path.join(app.root_path, 'venv', 'Scripts', 'python.exe')
-            listener_process = subprocess.Popen([venv_python, 'twitch_listener.py'], cwd=listener_dir)
+            python_exec = get_python_executable()
+            
+            listener_process = subprocess.Popen(
+                [python_exec, 'twitch_listener.py'], 
+                cwd=listener_dir
+            )
+            logger.info("Started listener process with Python: %s", python_exec)
             socketio.emit('listener_update', {'status': 'success', 'action': 'start'})
         except Exception as e:
-            logger.error(f"Error starting listener: {e}")
-            socketio.emit('listener_update', {'status': 'error', 'action': 'start', 'message': str(e)})
+            logger.error("Error starting listener: %s", str(e))
+            socketio.emit('listener_update', {
+                'status': 'error', 
+                'action': 'start', 
+                'message': f'Failed to start listener: {str(e)}'
+            })
     else:
-        socketio.emit('listener_update', {'status': 'error', 'action': 'start', 'message': 'Listener already running'})
+        socketio.emit('listener_update', {
+            'status': 'error', 
+            'action': 'start', 
+            'message': 'Listener already running'
+        })
 
 @socketio.on('stop_listener')
 def handle_stop_listener():
