@@ -1,8 +1,8 @@
 """RAG (Retrieval-Augmented Generation) handler module for document processing and retrieval."""
 
+import os
 import logging
 import fitz  # PyMuPDF
-import os
 from rank_bm25 import BM25Okapi
 
 logger = logging.getLogger(__name__)
@@ -14,8 +14,8 @@ def load_pdf(pdf_path):
         texts = [page.get_text("text") for page in doc]
         doc.close()  # Properly close the PDF
         return texts
-    except Exception as e:
-        logger.error(f"Error loading PDF {pdf_path}: {e}")
+    except (fitz.FileDataError, fitz.FileDataError, fitz.FileDataError) as e:
+        logger.error("Error loading PDF %s: %s", pdf_path, e)
         return []
 
 def load_txt(txt_path):
@@ -26,15 +26,15 @@ def load_txt(txt_path):
             text = file.read()
             paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
             return paragraphs
-    except Exception as e:
-        logger.error(f"Error loading TXT {txt_path}: {e}")
+    except (IOError, OSError) as e:
+        logger.error("Error loading TXT %s: %s", txt_path, e)
         return []
 
 def load_documents_from_directory(directory):
     """Load text content from all supported documents in a directory."""
     documents = []
     if not os.path.exists(directory):
-        logger.warning(f"Documents directory does not exist: {directory}")
+        logger.warning("Documents directory does not exist: %s", directory)
         return documents
 
     supported_extensions = {
@@ -45,18 +45,19 @@ def load_documents_from_directory(directory):
     for filename in os.listdir(directory):
         file_path = os.path.join(directory, filename)
         file_extension = os.path.splitext(filename)[1].lower()
-        
+
         if file_extension in supported_extensions:
-            logger.info(f"Loading {file_extension} file: {filename}")
+            logger.info("Loading %s file: %s", file_extension, filename)
             loader = supported_extensions[file_extension]
             documents.extend(loader(file_path))
         else:
-            logger.debug(f"Skipping unsupported file: {filename}")
+            logger.debug("Skipping unsupported file: %s", filename)
 
-    logger.info(f"Loaded {len(documents)} text segments from {directory}")
+    logger.info("Loaded %s text segments from %s", len(documents), directory)
     return documents
 
 class RAGHandler:
+    """RAGHandler class for managing the Retrieval-Augmented Generation system's lifecycle and retrieving documents."""
     def __init__(self):
         self.documents = []  # Original documents
         self.corpus = []     # Preprocessed documents
@@ -87,33 +88,33 @@ class RAGHandler:
             self.bm25 = BM25Okapi(tokenized_corpus)
             self.is_initialized = True
             logger.info("BM25 index updated successfully")
-        except Exception as e:
-            logger.error(f"Error updating BM25 index: {e}")
+        except (ValueError, TypeError) as e:
+            logger.error("Error updating BM25 index: %s", e)
             self.is_initialized = False
 
     def initialize(self, documents_dir):
         """Initialize or reinitialize the RAG system with documents from a directory."""
         try:
-            logger.info(f"Loading documents from: {documents_dir}")
+            logger.info("Loading documents from: %s", documents_dir)
             documents = load_documents_from_directory(documents_dir)
             self.documents = documents
             self.update_index()
-            logger.info(f"Initialized with {len(documents)} documents")
-        except Exception as e:
-            logger.error(f"Error initializing RAG: {e}")
+            logger.info("Initialized with %s documents", len(documents))
+        except (IOError, OSError) as e:
+            logger.error("Error initializing RAG: %s", e)
             self.is_initialized = False
 
     def add_documents(self, new_documents):
         """Add new documents and update the index."""
         if not new_documents:
             return
-        
+
         try:
             self.documents.extend(new_documents)
             self.update_index()
-            logger.info(f"Added {len(new_documents)} new documents")
-        except Exception as e:
-            logger.error(f"Error adding documents: {e}")
+            logger.info("Added %s new documents", len(new_documents))
+        except (ValueError, TypeError) as e:
+            logger.error("Error adding documents: %s", e)
 
     def get_relevant_documents(self, query, top_n=2):
         """Retrieve relevant documents for a given query."""
@@ -123,19 +124,19 @@ class RAGHandler:
         try:
             # Tokenize query exactly like the example
             tokenized_query = self.tokenize(self.preprocess_text(query))
-            
+
             # Get scores like in the example
             doc_scores = self.bm25.get_scores(tokenized_query)
-            
+
             # Use get_top_n directly like in the example
             top_docs = self.bm25.get_top_n(tokenized_query, self.documents, n=top_n)
-            
+
             # Log scores for debugging
-            logger.info(f"Query: {query}")
-            logger.info(f"Scores: {doc_scores}")
-            logger.info(f"Top docs: {top_docs}")
-            
+            logger.info("Query: %s", query)
+            logger.info("Scores: %s", doc_scores)
+            logger.info("Top docs: %s", top_docs)
+
             return top_docs
-        except Exception as e:
-            logger.error(f"Error retrieving relevant documents: {e}")
+        except (ValueError, TypeError) as e:
+            logger.error("Error retrieving relevant documents: %s", e)
             return []
