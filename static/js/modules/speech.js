@@ -5,6 +5,11 @@ let voicesReady = false;
 let currentLanguage = 'en';
 const languageVoiceMap = {};
 
+let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let analyser = audioContext.createAnalyser();
+analyser.fftSize = 256;
+let dataArray = new Uint8Array(analyser.frequencyBinCount);
+
 // Add preferred voice mapping
 const preferredVoices = {
     'en': {
@@ -52,7 +57,7 @@ function mapVoicesToLanguages(voices) {
 function getBestVoiceForLanguage(langCode) {
     const voices = languageVoiceMap[langCode] || languageVoiceMap['en'];
     const preferredGender = $('#voiceGender').val() || 'female';
-    
+
     // Try to find the preferred voice for the selected gender
     if (preferredVoices[langCode]) {
         const preferredName = preferredVoices[langCode][preferredGender];
@@ -61,7 +66,7 @@ function getBestVoiceForLanguage(langCode) {
     }
 
     // If preferred voice not found, try any voice with the selected gender
-    const genderVoice = voices.find(v => 
+    const genderVoice = voices.find(v =>
         v.name.toLowerCase().includes(preferredGender)
     );
     if (genderVoice) return genderVoice;
@@ -178,4 +183,22 @@ export function isSpeakingNow() {
 
 export function getCurrentLanguage() {
     return currentLanguage;
+}
+
+function connectAudioNodes() {
+    let source = audioContext.createMediaStreamSource(audioStream);
+    source.connect(analyser);
+}
+
+function updateMouthAnimation() {
+    analyser.getByteFrequencyData(dataArray);
+    let volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+    mouthState.value = volume / 256; // Normalize volume to [0, 1]
+    requestAnimationFrame(updateMouthAnimation);
+}
+
+// Call this function when starting speech
+function startAudioAnalysis() {
+    connectAudioNodes();
+    updateMouthAnimation();
 }
