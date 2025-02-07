@@ -27,8 +27,11 @@ export const config = {
             const $field = $(`#${this.snakeToCamelCase(field)}`);
             if ($field.length && data[field] !== undefined) {
                 if ($field.is(':checkbox')) {
-                    // Ensure boolean conversion for checkbox values
-                    $field.prop('checked', Boolean(data[field]));
+                    // Convert string values "True"/"False" to boolean
+                    const boolVal = (typeof data[field] === 'string')
+                        ? data[field].toLowerCase() === 'true'
+                        : Boolean(data[field]);
+                    $field.prop('checked', boolVal);
                 } else if ($field.is('select')) {
                     $field.val(data[field]).trigger('change');
                 } else {
