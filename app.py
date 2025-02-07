@@ -118,7 +118,6 @@ def serve_model_files(filename):
         return send_from_directory(models_dir, filename)
     return abort(404)
 
-
 # Helper functions
 def get_directory_contents(directory):
     """Return a list of subdirectory names in the given directory."""
@@ -192,36 +191,24 @@ def process_ai_request(data):
     # Get relevant documents from RAG handler
     retrieved_docs = rag_handler.get_relevant_documents(sanitized_input) if config.ask_rag else []
 
+    # Build messages for API call
     if not config.ask_rag or len(retrieved_docs) == 0:
-        structured_prompt = f"""
-        Persona:
-        Name: {config.persona_name}
-        Role: {config.persona_role}
-
-        Instructions:
-        {language_instruction}{config.pre_prompt}
-
-        User: {sanitized_input}
-        """
-
+        system_message = f"Persona:\nName: {config.persona_name}\nRole: {config.persona_role}\nInstructions: {language_instruction}{config.pre_prompt}"
+        user_message = sanitized_input
     else:
-        structured_prompt = f"""
-        Persona:
-        Name: {config.persona_name}
-        Role: {config.persona_role}
+        system_message = f"Persona:\nName: {config.persona_name}\nRole: {config.persona_role}\nInstructions: {language_instruction}{config.pre_prompt}"
+        user_message = f"Based on the following information, answer the question:\n\n{retrieved_docs}\n\nQuestion: {sanitized_input}"
 
-        Instructions:
-        {language_instruction} {config.pre_prompt}
-
-        Based on the following information, answer the question:\n\n{retrieved_docs}\n\nQuestion: {sanitized_input}
-        """
-        print(structured_prompt)
+    messages = [
+        {"role": "system", "content": system_message.strip()},
+        {"role": "user", "content": user_message.strip()}
+    ]
 
     try:
         ollama_start_time = time.time()
         response = ollama.chat(
             model=config.ollama_model,
-            messages=[{"role": "user", "content": structured_prompt.strip()}]
+            messages=messages
         )
         ollama_time = time.time() - ollama_start_time
 
