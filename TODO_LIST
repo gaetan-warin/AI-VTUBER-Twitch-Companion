@@ -1,5 +1,6 @@
 V1.0 Web working minimal
-    UI CFG => Work better on persona structure pre-prompt. Find tips, rag ?
+    UI CFG => Work better on persona structure pre-prompt. System prompt
+	Add rag system to drop file
     Big refactor / cleaning
     Update .env.example & Readme with new info
 

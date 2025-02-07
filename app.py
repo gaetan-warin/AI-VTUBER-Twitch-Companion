@@ -16,6 +16,9 @@ from dotenv import load_dotenv, find_dotenv
 import ollama
 import logging
 from langdetect import detect
+from rank_bm25 import BM25Okapi
+import numpy as np
+import fitz  # PyMuPDF
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True)
@@ -156,16 +159,47 @@ def process_ai_request(data):
     # Build language-specific prompt
     language_instruction = f"Please respond in {detected_language} language. "
 
-    structured_prompt = f"""
-    Persona:
-    Name: {config.persona_name}
-    Role: {config.persona_role}
+    pdf_path = ""  # Change to your actual file path
+    retrieved_docs = []
 
-    Instructions:
-    {language_instruction}{config.pre_prompt}
+    if pdf_path:
+        print("Loading PDF content: ", pdf_path)
+        documents = load_pdf(pdf_path)  # Populate documents with PDF content
 
-    User: {sanitized_input}
-    """
+        tokenized_corpus = [doc.lower().split() for doc in documents]
+        bm25 = BM25Okapi(tokenized_corpus)
+        
+        tokenized_query = sanitized_input.lower().split()
+        
+        scores = bm25.get_scores(tokenized_query)
+        top_n = 2  # Number of relevant docs to retrieve
+        top_doc_indices = np.argsort(scores)[-top_n:][::-1]
+        retrieved_docs = [documents[idx] for idx in top_doc_indices]
+    
+    if len(retrieved_docs) == 0:
+        structured_prompt = f"""
+        Persona:
+        Name: {config.persona_name}
+        Role: {config.persona_role}
+
+        Instructions:
+        {language_instruction}{config.pre_prompt}
+
+        User: {sanitized_input}
+        """
+    
+    else:
+        print("Retrieved documents")
+        structured_prompt = f"""
+        Persona:
+        Name: {config.persona_name}
+        Role: {config.persona_role}
+
+        Instructions:
+        {language_instruction} {config.pre_prompt}
+
+        Based on the following information, answer the question:\n\n{retrieved_docs}\n\nQuestion: {sanitized_input}
+        """
 
     try:
         ollama_start_time = time.time()
@@ -310,6 +344,11 @@ def get_python_executable():
     logger.error("No Python executable found")
     raise RuntimeError("No Python executable found in venv or system path")
 
+def load_pdf(pdf_path):
+    doc = fitz.open(pdf_path)
+    texts = [page.get_text("text") for page in doc]  # Extract text from each page
+    return texts  # Return a list of page texts
+    
 @socketio.on('start_listener')
 def handle_start_listener():
     global listener_process
