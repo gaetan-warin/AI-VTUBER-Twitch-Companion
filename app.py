@@ -47,7 +47,7 @@ class Config:
             'SOCKETIO_CORS_ALLOWED', 'API_URL', 'API_URL_PORT', 'FIXED_LANGUAGE', 'VOICE_GENDER',
             'WAKE_WORD', 'WAKE_WORD_ENABLED', 'CELEBRATE_FOLLOW', 'CELEBRATE_SUB',
             'CELEBRATE_FOLLOW_MESSAGE', 'CELEBRATE_SUB_MESSAGE', 'CELEBRATE_SOUND',
-            'SPEECH_BUBBLE_ENABLED'
+            'SPEECH_BUBBLE_ENABLED', 'ASK_RAG'
         ]
         self.load()
 
@@ -176,7 +176,7 @@ def process_ai_request(data):
         top_doc_indices = np.argsort(scores)[-top_n:][::-1]
         retrieved_docs = [documents[idx] for idx in top_doc_indices]
     
-    if len(retrieved_docs) == 0:
+    if not config.ask_rag or len(retrieved_docs) == 0:
         structured_prompt = f"""
         Persona:
         Name: {config.persona_name}

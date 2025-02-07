@@ -569,7 +569,7 @@ button:hover {
     cursor: pointer;
 }
 
-#configBtn {
+#configBtn, #fileManager {  
     margin-top: 10px;
     margin-bottom: 10px;
     background-color: rgb(40, 40, 109);
