@@ -16,9 +16,9 @@ from dotenv import load_dotenv, find_dotenv
 import ollama
 import logging
 from langdetect import detect
-from rank_bm25 import BM25Okapi
 import numpy as np
 import fitz  # PyMuPDF
+from rag_handler import RAGHandler
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True)
@@ -133,6 +133,9 @@ def get_celebration_sounds():
         logger.error(f"Error accessing sounds directory: {e}")
         return {'sounds': []}
 
+# Initialize global RAG handler
+rag_handler = RAGHandler()
+
 def process_ai_request(data):
     print(f"Processing AI request: {data}")
     start_time = time.time()
@@ -159,22 +162,8 @@ def process_ai_request(data):
     # Build language-specific prompt
     language_instruction = f"Please respond in {detected_language} language. "
 
-    pdf_path = ""  # Change to your actual file path
-    retrieved_docs = []
-
-    if pdf_path:
-        print("Loading PDF content: ", pdf_path)
-        documents = load_pdf(pdf_path)  # Populate documents with PDF content
-
-        tokenized_corpus = [doc.lower().split() for doc in documents]
-        bm25 = BM25Okapi(tokenized_corpus)
-        
-        tokenized_query = sanitized_input.lower().split()
-        
-        scores = bm25.get_scores(tokenized_query)
-        top_n = 2  # Number of relevant docs to retrieve
-        top_doc_indices = np.argsort(scores)[-top_n:][::-1]
-        retrieved_docs = [documents[idx] for idx in top_doc_indices]
+    # Get relevant documents from RAG handler
+    retrieved_docs = rag_handler.get_relevant_documents(sanitized_input) if config.ask_rag else []
     
     if not config.ask_rag or len(retrieved_docs) == 0:
         structured_prompt = f"""
@@ -189,7 +178,6 @@ def process_ai_request(data):
         """
     
     else:
-        print("Retrieved documents")
         structured_prompt = f"""
         Persona:
         Name: {config.persona_name}
@@ -200,6 +188,7 @@ def process_ai_request(data):
 
         Based on the following information, answer the question:\n\n{retrieved_docs}\n\nQuestion: {sanitized_input}
         """
+        print(structured_prompt)
 
     try:
         ollama_start_time = time.time()
@@ -345,10 +334,25 @@ def get_python_executable():
     raise RuntimeError("No Python executable found in venv or system path")
 
 def load_pdf(pdf_path):
-    doc = fitz.open(pdf_path)
-    texts = [page.get_text("text") for page in doc]  # Extract text from each page
-    return texts  # Return a list of page texts
-    
+    """Load text content from a PDF file."""
+    try:
+        doc = fitz.open(pdf_path)
+        texts = [page.get_text("text") for page in doc]
+        return texts
+    except Exception as e:
+        logger.error(f"Error loading PDF {pdf_path}: {e}")
+        return []
+
+def load_documents_from_directory(directory):
+    """Load text content from all documents in a directory."""
+    documents = []
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        if filename.endswith('.pdf'):
+            documents.extend(load_pdf(file_path))
+        # Add more file type handlers here if needed
+    return documents
+
 @socketio.on('start_listener')
 def handle_start_listener():
     global listener_process
@@ -429,6 +433,10 @@ def handle_display_question(data):
 # Main entry point
 if __name__ == '__main__':
     try:
+        # Initialize RAG system with documents from the static/doc/ directory
+        documents_dir = os.path.join(app.root_path, 'static', 'doc')
+        rag_handler.initialize(documents_dir)
+            
         logger.info(f"Starting server at {config.api_url}:{config.api_url_port}")
         socketio.run(app, host=config.socketio_ip, port=int(config.socketio_ip_port))
     except Exception as e:
