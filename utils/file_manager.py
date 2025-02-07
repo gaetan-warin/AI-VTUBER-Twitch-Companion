@@ -89,7 +89,7 @@ class FileManager:
 def setup_file_manager_routes(socketio, file_manager):
     """Setup SocketIO routes for file management."""
     @socketio.on('list_documents')
-    def handle_list_documents():
+    def handle_list_documents(data=None):  # added parameter data
         """Handle listing documents and emit the documents list."""
         documents = file_manager.list_documents()
         socketio.emit('documents_list', {'documents': documents})

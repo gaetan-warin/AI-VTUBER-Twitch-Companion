@@ -6,22 +6,20 @@ through Ollama, and handles Twitch chat interactions with WebSocket communicatio
 
 import os
 import re
-import eventlet
-import bleach
+import logging
 import subprocess
 import time
-from flask import Flask, render_template, send_from_directory, abort, jsonify, request
+import bleach
+import eventlet
+from flask import Flask, render_template, send_from_directory, abort
 from flask_socketio import SocketIO
 from dotenv import load_dotenv, find_dotenv
 import ollama
-import logging
 from langdetect import detect
-import numpy as np
+from langdetect.lang_detect_exception import LangDetectException
 import fitz  # PyMuPDF
-from rag_handler import RAGHandler
-from werkzeug.utils import secure_filename
-import humanize  # Add this to requirements.txt
-from file_manager import FileManager, setup_file_manager_routes
+from utils.rag_handler import RAGHandler
+from utils.file_manager import FileManager, setup_file_manager_routes
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True)
@@ -41,6 +39,9 @@ logger = logging.getLogger(__name__)
 
 # Configuration class
 class Config:
+    """Manages environment variables and application settings."""
+    socketio_cors_allowed: str  # explicitly declare the attribute
+
     def __init__(self):
         self.fields = [
             'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'AVATAR_MODEL', 'BACKGROUND_IMAGE',
@@ -54,17 +55,23 @@ class Config:
         ]
         self.load()
 
+        if not self.socketio_cors_allowed:
+            self.socketio_cors_allowed = '*'  # set default if not provided
+
     def load(self):
+        """Load configuration from environment variables."""
         for field in self.fields:
             setattr(self, field.lower(), os.getenv(field))
 
     def update(self, **kwargs):
+        """Update configuration settings with provided values and save changes."""
         for key, value in kwargs.items():
             if key.upper() in self.fields:
                 setattr(self, key.lower(), value)
         self.save()
 
     def save(self):
+        """Persist current configuration to the environment file."""
         env_file_path = find_dotenv()
         with open(env_file_path, 'w', encoding='latin1') as f:
             for field in self.fields:
@@ -73,6 +80,7 @@ class Config:
                     f.write(f"{field}={value}\n")
 
     def to_dict(self):
+        """Return the configuration settings as a dictionary."""
         return {field: getattr(self, field.lower()) for field in self.fields}
 
 config = Config()
@@ -81,24 +89,6 @@ config = Config()
 socketio = SocketIO(app, cors_allowed_origins=config.socketio_cors_allowed, async_mode='eventlet')
 
 listener_process = None
-
-# Route handlers
-@app.route('/')
-def home():
-    return render_template('avatar.html')
-
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
-
-@app.route('/models/<path:filename>')
-def serve_model_files(filename):
-    models_dir = os.path.join(app.root_path, 'models')
-    if os.path.isfile(os.path.join(models_dir, filename)):
-        return send_from_directory(models_dir, filename)
-    return abort(404)
-
-# Remove the @app.route('/api/documents'...) endpoints
 
 # Initialize global RAG handler
 rag_handler = RAGHandler()
@@ -109,38 +99,58 @@ file_manager = FileManager(app.root_path, socketio, rag_handler)
 # Setup file manager routes
 setup_file_manager_routes(socketio, file_manager)
 
-# Remove the following handlers as they're now in file_manager.py:
-# @socketio.on('list_documents')
-# @socketio.on('delete_document')
-# @socketio.on('upload_document')
+# Route handlers
+@app.route('/')
+def home():
+    """Render the avatar homepage."""
+    return render_template('avatar.html')
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """Serve static files from the static directory."""
+    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
+
+@app.route('/models/<path:filename>')
+def serve_model_files(filename):
+    """Serve model files if they exist, otherwise abort with 404."""
+    models_dir = os.path.join(app.root_path, 'models')
+    if os.path.isfile(os.path.join(models_dir, filename)):
+        return send_from_directory(models_dir, filename)
+    return abort(404)
+
 
 # Helper functions
 def get_directory_contents(directory):
+    """Return a list of subdirectory names in the given directory."""
     try:
         return [f for f in os.listdir(directory) if os.path.isdir(os.path.join(directory, f))]
     except OSError as e:
-        logger.error(f"Error accessing directory {directory}: {e}")
+        logger.error("Error accessing directory %s: %s", directory, e)
         return []
 
 def get_file_contents(directory):
+    """Return a list of file names in the given directory."""
     try:
         return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
     except OSError as e:
-        logger.error(f"Error accessing directory {directory}: {e}")
+        logger.error("Error accessing directory %s: %s", directory, e)
         return []
 
 def get_avatar_models():
+    """Return a dict containing available avatar models."""
     return {'models': get_directory_contents(os.path.join(app.root_path, 'models'))}
 
 def get_background_images():
+    """Return a dict containing available background images."""
     return {'images': get_file_contents(os.path.join(app.root_path, 'static', 'images', 'background'))}
 
 def get_ollama_models():
+    """Return a dict containing available Ollama models."""
     try:
         response = ollama.list()
         return {'models': [model['model'] for model in response['models']]}
-    except Exception as e:
-        logger.error(f"Error fetching Ollama models: {e}")
+    except ollama.OllamaError as e:
+        logger.error("Error fetching Ollama models: %s", e)
         return {'models': []}
 
 def get_celebration_sounds():
@@ -149,10 +159,11 @@ def get_celebration_sounds():
     try:
         return {'sounds': [f for f in os.listdir(sounds_dir) if f.endswith('.mp3')]}
     except OSError as e:
-        logger.error(f"Error accessing sounds directory: {e}")
+        logger.error("Error accessing sounds directory: %s", e)
         return {'sounds': []}
 
 def process_ai_request(data):
+    """Process an AI request based on the input data and return a response."""
     print(f"Processing AI request: {data}")
     start_time = time.time()
     text = data.get('text', '').strip()
@@ -170,7 +181,7 @@ def process_ai_request(data):
     else:
         try:
             detected_language = detect(sanitized_input)
-        except:
+        except LangDetectException:
             detected_language = 'en'
 
     print(f"Using language: {detected_language}")
@@ -224,11 +235,11 @@ def process_ai_request(data):
         # Detect language of the response
         try:
             response_language = detect(cleaned_response)
-        except:
+        except LangDetectException:
             response_language = detected_language
 
         total_time = time.time() - start_time
-        print(f"AI Processing Times:")
+        print("AI Processing Times:")
         print(f"  - Model call: {config.ollama_model}")
         print(f"  - Ollama API call: {ollama_time:.2f} seconds")
         print(f"  - Total processing: {total_time:.2f} seconds")
@@ -239,10 +250,11 @@ def process_ai_request(data):
             'language': response_language
         }, 200
 
-    except Exception as e:
+    # Replace broad exception with explicit exceptions (e.g., ollama.ChatError, ValueError)
+    except (ollama.ChatError, ValueError) as e:
         total_time = time.time() - start_time
-        logger.error(f"AI processing error ({total_time:.2f} seconds): {e}")
-        return {'status': 'error', 'message': f'AI service error: {str(e)}'}, 500
+        logger.error("AI processing error (%0.2f seconds): %s", total_time, e)
+        return {'status': 'error', 'message': f'AI service error: {e}'}, 500
 
 def emit_celebration_event(event_type, username):
     """Emit celebration events to the frontend based on event type."""
@@ -262,20 +274,23 @@ def emit_celebration_event(event_type, username):
 # WebSocket event handlers
 @socketio.on('connect')
 def handle_connect():
+    """Handle new client connection."""
     logger.info("Client connected")
 
 @socketio.on('disconnect')
 def handle_disconnect():
+    """Handle client disconnection."""
     logger.info("Client disconnected")
 
 @socketio.on('speak')
 def handle_speak(data):
+    """Process speak event data and emit the text to be spoken."""
     text = data.get('text', '').strip()
     if text:
         try:
             # Detect language of the text to speak
             detected_language = detect(text)
-        except:
+        except LangDetectException:
             detected_language = 'en'
 
         print(f"detected_language: {detected_language}")
@@ -287,6 +302,7 @@ def handle_speak(data):
 
 @socketio.on('ask_ai')
 def handle_ask_ai(data):
+    """Handle AI request from client and emit AI response."""
     response, status_code = process_ai_request(data)
     if status_code == 200:
         socketio.emit('ai_response', {
@@ -296,6 +312,7 @@ def handle_ask_ai(data):
 
 @socketio.on('save_config')
 def handle_save_config(data):
+    """Handle saving configuration settings."""
     try:
         config.update(**data)
         socketio.emit('update_twitch_config', {k: v for k, v in data.items() if k in [
@@ -303,12 +320,14 @@ def handle_save_config(data):
             'KEY_WORD_FOLLOW', 'KEY_WORD_SUB', 'DELIMITER_NAME', 'DELIMITER_NAME_END'
         ]})
         socketio.emit('save_config_response', {'status': 'success', 'config': config.to_dict()})
-    except Exception as e:
-        logger.error(f"Error saving configuration: {e}")
+    # Example: catch IO errors explicitly
+    except (IOError, OSError) as e:
+        logger.error("Error saving configuration: %s", e)
         socketio.emit('save_config_response', {'status': 'error', 'message': str(e)})
 
 @socketio.on('get_init_cfg')
 def handle_get_init_cfg():
+    """Emit initial configuration and resource lists to the client."""
     try:
         socketio.emit('init_cfg', {
             'status': 'success',
@@ -320,12 +339,13 @@ def handle_get_init_cfg():
                 'soundsList': get_celebration_sounds().get('sounds', [])
             }
         })
-    except Exception as e:
-        logger.error(f"Error getting initial configuration: {e}")
+    except (AttributeError, KeyError, TypeError) as e:
+        logger.error("Error getting initial configuration: %s", e)
         socketio.emit('init_cfg', {'status': 'error', 'message': str(e)})
 
 @socketio.on('get_listener_status')
 def handle_get_listener_status():
+    """Emit the current status of the listener process."""
     status = 'running' if listener_process and listener_process.poll() is None else 'stopped'
     socketio.emit('listener_status', {'status': status})
 
@@ -355,8 +375,9 @@ def load_pdf(pdf_path):
         doc = fitz.open(pdf_path)
         texts = [page.get_text("text") for page in doc]
         return texts
-    except Exception as e:
-        logger.error(f"Error loading PDF {pdf_path}: {e}")
+    # Catch file related errors explicitly
+    except (OSError, RuntimeError) as e:
+        logger.error("Error loading PDF %s: %s", pdf_path, e)
         return []
 
 def load_documents_from_directory(directory):
@@ -371,6 +392,7 @@ def load_documents_from_directory(directory):
 
 @socketio.on('start_listener')
 def handle_start_listener():
+    """Start the listener process for Twitch chat."""
     global listener_process
     if not listener_process:
         try:
@@ -383,12 +405,12 @@ def handle_start_listener():
             )
             logger.info("Started listener process with Python: %s", python_exec)
             socketio.emit('listener_update', {'status': 'success', 'action': 'start'})
-        except Exception as e:
-            logger.error("Error starting listener: %s", str(e))
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.error("Error starting listener: %s", e)
             socketio.emit('listener_update', {
                 'status': 'error',
                 'action': 'start',
-                'message': f'Failed to start listener: {str(e)}'
+                'message': 'Failed to start listener: %s' % str(e)
             })
     else:
         socketio.emit('listener_update', {
@@ -399,6 +421,7 @@ def handle_start_listener():
 
 @socketio.on('stop_listener')
 def handle_stop_listener():
+    """Stop the listener process if it is running."""
     global listener_process
     if listener_process:
         listener_process.terminate()
@@ -437,8 +460,9 @@ def handle_trigger_ai_request(data):
                 'text': response['message'],
                 'fixedLanguage': response['language']
             })
-    except Exception as e:
-        logger.error(f"AI request error: {e}")
+    # Catch explicit errors from process_ai_request as needed
+    except (ollama.ChatError, ValueError) as e:
+        logger.error("AI request error: %s", e)
         socketio.emit('ai_response_error', {'message': str(e)})
 
 @socketio.on('display_question')
@@ -453,7 +477,8 @@ if __name__ == '__main__':
         documents_dir = os.path.join(app.root_path, 'static', 'doc')
         rag_handler.initialize(documents_dir)
 
-        logger.info(f"Starting server at {config.api_url}:{config.api_url_port}")
+        logger.info("Starting server at %s:%s", config.api_url, config.api_url_port)
         socketio.run(app, host=config.socketio_ip, port=int(config.socketio_ip_port))
-    except Exception as e:
-        logger.error(f"Error starting server: {e}")
+    # Catch server startup errors explicitly
+    except (OSError, RuntimeError) as e:
+        logger.error("Error starting server: %s", e)
