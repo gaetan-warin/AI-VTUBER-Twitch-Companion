@@ -4,6 +4,7 @@ import { saveConfig, saveModalConfig, config, populateSelectElement } from './co
 import { checkListenerStatus, startListener, stopListener, emit } from './socket.js';
 import { areVoicesReady } from './speech.js';
 import { updateCelebrationSound } from './effects.js';
+import { initializeFileManager, openFileManagerModal } from './fileManager.js';
 
 export function setupUI() {
     setupEventListeners();
@@ -14,6 +15,8 @@ export function setupUI() {
     setupWaveToggle();
     setupWakeWordToggle();
     $('#waveCanvas').hide();
+    initializeFileManager();
+    setupFileManagerButton();
 }
 
 function setupEventListeners() {
@@ -77,6 +80,8 @@ function setupEventListeners() {
             username: 'TestUser'
         });
     });
+
+    $('#fileManager').on('click', openFileManagerModal);
 }
 
 function toggleSidebar() {
@@ -146,6 +151,10 @@ function setupWakeWordToggle() {
 
     $checkbox.on('change', updateWakeWordVisibility);
     updateWakeWordVisibility(); // Call this immediately to set initial state
+}
+
+function setupFileManagerButton() {
+    $('#fileManager').on('click', openFileManagerModal);
 }
 
 export function showNotification(type, message) {

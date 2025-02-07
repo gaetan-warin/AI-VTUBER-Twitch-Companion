@@ -171,3 +171,5 @@ cython_debug/
 .pypirc
 
 *.cmd
+
+static/doc

@@ -2,6 +2,7 @@ import { speak } from './speech.js';
 import { showQuestionDisplay, handleInitialConfig, handleSaveConfigResponse, handleListenerUpdate } from './ui.js';
 import { triggerFireworks } from './effects.js';
 import { loadAvatarModel } from './model.js';
+import { handleDocumentsList, handleDocumentDeleted, handleDocumentUploaded } from './fileManager.js';
 
 // Export the socket instance
 export const socket = io({
@@ -29,6 +30,9 @@ export function initializeSocket() {
     });
     socket.on('save_config_response', handleSaveConfigResponse);
     socket.on('listener_update', handleListenerUpdate);
+    socket.on('documents_list', handleDocumentsList);
+    socket.on('document_deleted', handleDocumentDeleted);
+    socket.on('document_uploaded', handleDocumentUploaded);
 }
 
 export function askAI(text) {

@@ -47,15 +47,15 @@
         <div class="sidebar-content">
             <div class="tab-content" id="general" style="display: block;">
                 <div class="settings-container">
-                    <label for="avatarModel">Avatar Model:</label>
+                <label for="avatarModel">Avatar Model:</label>
                     <select id="avatarModel"></select>
                     <label for="backgroundImage">Background Image:</label>
                     <select id="backgroundImage"></select>
-                    <label for="personaName">Persona Name:</label>
-                    <input type="text" id="personaName" value="Sarah">
-                    <label for="personaRole">Persona Role:</label>
-                    <textarea id="personaRole">Virtual assistant providing calm and engaging interactions.</textarea>
-                    <label for="prePrompt">Pre Prompt:</label>
+                <label for="personaName">Persona Name:</label>
+                <input type="text" id="personaName" value="Sarah">
+                <label for="personaRole">Persona Role:</label>
+                <textarea id="personaRole">Virtual assistant providing calm and engaging interactions.</textarea>
+                <label for="prePrompt">Pre Prompt:</label>
                     <textarea id="prePrompt">Please respond concisely and avoid monologues. Ensure your behavior strictly adheres to Twitch's Terms of Service, Community Guidelines, and Developer Agreement. Filter out prohibited content (hate speech, threats, etc.), promote respectful interactions, avoid illegal or harmful activities, prevent spam, respect user privacy, and always identify yourself as a bot. Follow channel-specific rules, provide neutral responses when unsure, and be updated regularly to comply with any changes in Twitch's policies.</textarea>
                 </div>
             </div>
@@ -116,8 +116,8 @@
 
                     <div class="settings-section">
                         <h3>AI Settings</h3>
-                        <label for="ollamaModel">Ollama Model:</label>
-                        <select id="ollamaModel"></select>
+                <label for="ollamaModel">Ollama Model:</label>
+                <select id="ollamaModel"></select>
                         <div class="checkbox-wrapper">
                             <input type="checkbox" id="speechBubbleEnabled" checked>
                             <label for="speechBubbleEnabled">Show Speech Bubble</label>
@@ -234,6 +234,36 @@
                 <input type="text" id="clientId" class="blurry" value="gp762nuuoqcoxypju8c569th9wz7q5">
             </div>
             <button id="saveModalConfigBtn">ok</button>
+        </div>
+    </div>
+
+    <!-- Add this after your other modals -->
+    <div id="fileManagerModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Document Manager</h2>
+            
+            <div class="file-upload-section">
+                <input type="file" id="fileUpload" accept=".pdf,.txt" style="display: none">
+                <button id="uploadBtn" class="primary-button">Upload New Document</button>
+                <p class="field-description">Supported formats: PDF, TXT</p>
+            </div>
+
+            <div class="documents-list">
+                <table id="documentsTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Size</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Documents will be listed here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

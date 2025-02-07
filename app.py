@@ -10,7 +10,7 @@ import eventlet
 import bleach
 import subprocess
 import time
-from flask import Flask, render_template, send_from_directory, abort
+from flask import Flask, render_template, send_from_directory, abort, jsonify, request
 from flask_socketio import SocketIO
 from dotenv import load_dotenv, find_dotenv
 import ollama
@@ -19,6 +19,9 @@ from langdetect import detect
 import numpy as np
 import fitz  # PyMuPDF
 from rag_handler import RAGHandler
+from werkzeug.utils import secure_filename
+import humanize  # Add this to requirements.txt
+from file_manager import FileManager, setup_file_manager_routes
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True)
@@ -95,6 +98,22 @@ def serve_model_files(filename):
         return send_from_directory(models_dir, filename)
     return abort(404)
 
+# Remove the @app.route('/api/documents'...) endpoints
+
+# Initialize global RAG handler
+rag_handler = RAGHandler()
+
+# Initialize FileManager
+file_manager = FileManager(app.root_path, socketio, rag_handler)
+
+# Setup file manager routes
+setup_file_manager_routes(socketio, file_manager)
+
+# Remove the following handlers as they're now in file_manager.py:
+# @socketio.on('list_documents')
+# @socketio.on('delete_document')
+# @socketio.on('upload_document')
+
 # Helper functions
 def get_directory_contents(directory):
     try:
@@ -133,9 +152,6 @@ def get_celebration_sounds():
         logger.error(f"Error accessing sounds directory: {e}")
         return {'sounds': []}
 
-# Initialize global RAG handler
-rag_handler = RAGHandler()
-
 def process_ai_request(data):
     print(f"Processing AI request: {data}")
     start_time = time.time()
@@ -147,7 +163,7 @@ def process_ai_request(data):
         return {'status': 'error', 'message': 'No text provided'}, 400
 
     sanitized_input = bleach.clean(text)
-    
+
     # Detect input language or use fixed language for microphone input
     if source == 'microphone' and fixed_language:
         detected_language = fixed_language
@@ -156,7 +172,7 @@ def process_ai_request(data):
             detected_language = detect(sanitized_input)
         except:
             detected_language = 'en'
-    
+
     print(f"Using language: {detected_language}")
 
     # Build language-specific prompt
@@ -164,7 +180,7 @@ def process_ai_request(data):
 
     # Get relevant documents from RAG handler
     retrieved_docs = rag_handler.get_relevant_documents(sanitized_input) if config.ask_rag else []
-    
+
     if not config.ask_rag or len(retrieved_docs) == 0:
         structured_prompt = f"""
         Persona:
@@ -176,7 +192,7 @@ def process_ai_request(data):
 
         User: {sanitized_input}
         """
-    
+
     else:
         structured_prompt = f"""
         Persona:
@@ -193,15 +209,15 @@ def process_ai_request(data):
     try:
         ollama_start_time = time.time()
         response = ollama.chat(
-            model=config.ollama_model, 
+            model=config.ollama_model,
             messages=[{"role": "user", "content": structured_prompt.strip()}]
         )
         ollama_time = time.time() - ollama_start_time
-        
+
         cleaned_response = re.sub(
-            r'<think>.*?</think>|\s+', 
-            ' ', 
-            response['message']['content'], 
+            r'<think>.*?</think>|\s+',
+            ' ',
+            response['message']['content'],
             flags=re.DOTALL
         ).strip()
 
@@ -216,7 +232,7 @@ def process_ai_request(data):
         print(f"  - Model call: {config.ollama_model}")
         print(f"  - Ollama API call: {ollama_time:.2f} seconds")
         print(f"  - Total processing: {total_time:.2f} seconds")
-        
+
         return {
             'status': 'success',
             'message': cleaned_response,
@@ -234,12 +250,12 @@ def emit_celebration_event(event_type, username):
     # Convert string 'true'/'false' to boolean or handle direct boolean values
     celebrate_follow = str(config.celebrate_follow).lower() == 'true'
     celebrate_sub = str(config.celebrate_sub).lower() == 'true'
-    
+
     if event_type == 'follow' and celebrate_follow:
         message = f"New FOLLOW: {username}"
     elif event_type == 'sub' and celebrate_sub:
         message = f"NEW SUB: {username}"
-        
+
     if message:
         socketio.emit('fireworks', {'message': message})
 
@@ -319,7 +335,7 @@ def get_python_executable():
     if os.path.exists(venv_python):
         logger.info("Using venv Python: %s", venv_python)
         return venv_python
-    
+
     # Try system Python paths
     system_paths = ['python', 'python3', 'py']
     for cmd in system_paths:
@@ -329,7 +345,7 @@ def get_python_executable():
             return cmd
         except (subprocess.SubprocessError, FileNotFoundError):
             continue
-    
+
     logger.error("No Python executable found")
     raise RuntimeError("No Python executable found in venv or system path")
 
@@ -360,9 +376,9 @@ def handle_start_listener():
         try:
             listener_dir = os.path.join(app.root_path, 'listener')
             python_exec = get_python_executable()
-            
+
             listener_process = subprocess.Popen(
-                [python_exec, 'twitch_listener.py'], 
+                [python_exec, 'twitch_listener.py'],
                 cwd=listener_dir
             )
             logger.info("Started listener process with Python: %s", python_exec)
@@ -370,14 +386,14 @@ def handle_start_listener():
         except Exception as e:
             logger.error("Error starting listener: %s", str(e))
             socketio.emit('listener_update', {
-                'status': 'error', 
-                'action': 'start', 
+                'status': 'error',
+                'action': 'start',
                 'message': f'Failed to start listener: {str(e)}'
             })
     else:
         socketio.emit('listener_update', {
-            'status': 'error', 
-            'action': 'start', 
+            'status': 'error',
+            'action': 'start',
             'message': 'Listener already running'
         })
 
@@ -436,7 +452,7 @@ if __name__ == '__main__':
         # Initialize RAG system with documents from the static/doc/ directory
         documents_dir = os.path.join(app.root_path, 'static', 'doc')
         rag_handler.initialize(documents_dir)
-            
+
         logger.info(f"Starting server at {config.api_url}:{config.api_url_port}")
         socketio.run(app, host=config.socketio_ip, port=int(config.socketio_ip_port))
     except Exception as e:

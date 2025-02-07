@@ -389,7 +389,7 @@ button:hover {
     padding-right: 15px;
     margin-bottom: 20px;
 }
-    
+
 .settings-section {
     position: relative;
     background: rgba(255, 255, 255, 0.95);
@@ -534,13 +534,13 @@ button:hover {
 
 .modal-content {
     background-color: #fefefe;
-    margin: 2% auto; /* Changed from 15% to 2% to position it near the top */
+    margin: 2% auto;
     padding: 20px;
     border: 1px solid #888;
-    width: 80%;
-    max-width: 600px;
+    width: 90%;
+    max-width: 800px;
     border-radius: 10px;
-    animation: slideDown 0.3s ease-out; /* Added animation for smooth entry */
+    animation: slideDown 0.3s ease-out;
 }
 
 /* Add animation keyframes */
@@ -569,7 +569,7 @@ button:hover {
     cursor: pointer;
 }
 
-#configBtn, #fileManager {  
+#configBtn, #fileManager {
     margin-top: 10px;
     margin-bottom: 10px;
     background-color: rgb(40, 40, 109);
@@ -799,4 +799,77 @@ button:hover {
     color: #45a049;
     text-decoration: underline;
 }
+
+.documents-list {
+    margin-top: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#documentsTable {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+#documentsTable th,
+#documentsTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#documentsTable th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+#documentsTable th:nth-child(1),
+#documentsTable td:nth-child(1) {
+    width: 50%;
+}
+
+#documentsTable th:nth-child(2),
+#documentsTable td:nth-child(2),
+#documentsTable th:nth-child(3),
+#documentsTable td:nth-child(3) {
+    width: 20%;
+}
+
+#documentsTable th:nth-child(4),
+#documentsTable td:nth-child(4) {
+    width: 10%;
+    text-align: center;
+}
+
+.delete-btn {
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.delete-btn:hover {
+    background-color: #cc0000;
+}
+
+.file-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.file-upload-section {
+    padding: 20px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* ...rest of your existing styles... */
 
