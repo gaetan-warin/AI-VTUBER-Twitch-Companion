@@ -6,9 +6,6 @@ let currentLanguage = 'en';
 const languageVoiceMap = {};
 
 let audioContext = new (window.AudioContext || window.webkitAudioContext)();
-let analyser = audioContext.createAnalyser();
-analyser.fftSize = 256;
-let dataArray = new Uint8Array(analyser.frequencyBinCount);
 
 // Add preferred voice mapping
 const preferredVoices = {
@@ -88,11 +85,9 @@ export function speak(text, language = null) {
     if (isSpeaking) {
         synth.cancel();
         isSpeaking = false;
-        gsap.killTweensOf(mouthState);
         hideSpeechBubble();
     }
 
-    // Use provided language from backend or fallback to default
     currentLanguage = language || 'en';
     console.log('Using language:', currentLanguage);
 
@@ -125,11 +120,16 @@ export function speak(text, language = null) {
                     lang: voice.lang,
                     onstart: () => {
                         isSpeaking = true;
-                        animateMouth();
+                        // Start phoneme-based mouth sync instead of Meyda sync
+                        startPhonemeMouthSync(utterance, textToSpeak);
                     },
                     onend: () => {
                         isSpeaking = false;
-                        stopMouthAnimation();
+                        // Clear the phoneme sync timer if exists
+                        if (utterance._phonemeTimer) {
+                            clearInterval(utterance._phonemeTimer);
+                        }
+                        mouthState.value = 0; // reset mouth to closed
                         hideSpeechBubble();
                         partIndex++;
                         setTimeout(speakNextPart, punctuation ? 500 : 0);
@@ -144,26 +144,29 @@ export function speak(text, language = null) {
     speakNextPart();
 }
 
-export function animateMouth() {
-    gsap.to(mouthState, {
-        duration: 0.2,
-        value: 1,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-        modifiers: {
-            value: () => Math.abs(Math.sin(performance.now() / 200)) * 0.8
+// New: Use phoneme-based logic to update mouthState.value on each character
+function startPhonemeMouthSync(utterance, text) {
+    let index = 0;
+    // Update mouthState.value every 100ms based on next character (simulate phoneme timing)
+    utterance._phonemeTimer = setInterval(() => {
+        if (index < text.length) {
+            const char = text[index];
+            mouthState.value = getMouthValueForChar(char);
+            index++;
+        } else {
+            clearInterval(utterance._phonemeTimer);
         }
-    });
+    }, 100);
 }
 
-export function stopMouthAnimation() {
-    gsap.killTweensOf(mouthState);
-    gsap.to(mouthState, {
-        duration: 0.3,
-        value: 0,
-        ease: "power2.out"
-    });
+// New helper: determine mouth value for a single character (phoneme proxy)
+function getMouthValueForChar(char) {
+    if (/[aeiou]/i.test(char)) { // vowels -> wide open
+        return 1;
+    } else if (/[a-z]/i.test(char)) { // consonants -> partially open
+        return 0.5;
+    }
+    return 0;
 }
 
 function showSpeechBubble(text) {
@@ -185,20 +188,11 @@ export function getCurrentLanguage() {
     return currentLanguage;
 }
 
-function connectAudioNodes() {
-    let source = audioContext.createMediaStreamSource(audioStream);
-    source.connect(analyser);
-}
-
-function updateMouthAnimation() {
-    analyser.getByteFrequencyData(dataArray);
-    let volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-    mouthState.value = volume / 256; // Normalize volume to [0, 1]
-    requestAnimationFrame(updateMouthAnimation);
-}
-
-// Call this function when starting speech
-function startAudioAnalysis() {
-    connectAudioNodes();
-    updateMouthAnimation();
+// New: Exported function to resume AudioContext on user gesture
+export function resumeAudioContext() {
+    if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+            console.log('AudioContext resumed via user gesture.');
+        });
+    }
 }

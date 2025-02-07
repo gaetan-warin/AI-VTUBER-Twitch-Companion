@@ -51,7 +51,7 @@ export function loadAvatarModel(modelPath) {
 
     app.ticker.add(() => {
         if (currentModel && mouthState.value !== undefined) {
-            updateMouthState(currentModel, mouthState.value);
+            updateMouthState(mouthState.value);
         }
     });
 
@@ -69,9 +69,9 @@ function setupMouthMovement(model, modelPath) {
     };
 }
 
-function updateMouthState() {
+function updateMouthState(value) {
     if (isSpeakingNow())
-        mouthState.value = Math.sin(performance.now() / 200) / 2 + 0.5;
+        mouthState.value = value;
 }
 
 export function getModelPath(selectedModel) {
