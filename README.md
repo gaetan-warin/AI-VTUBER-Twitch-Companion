@@ -19,6 +19,7 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
 - **UI Configuration**: User-friendly interface for all settings
 - **Spam Protection**: Built-in protection against message spam and duplicate messages
 - **Input Sanitization**: User input is sanitized to prevent injection attacks
+- **Background Image Selection**: Choose from available background images in the UI
 
 ## Requirements
 
@@ -68,7 +69,7 @@ This project implements an AI chatbot that interacts with Twitch chat using a Li
     (Optional) : if you want to change model file:
     - Place the model folder under the `model/` directory
     - Ensure all necessary textures, expressions, and motion files are available within their respective subdirectories
-    
+
     /!\ This repo work with .moc (Live2D Cubism 2.0) model
     Info: [Live2d](https://www.live2d.com/en/)
 
