@@ -187,12 +187,3 @@ export function isSpeakingNow() {
 export function getCurrentLanguage() {
     return currentLanguage;
 }
-
-// New: Exported function to resume AudioContext on user gesture
-export function resumeAudioContext() {
-    if (audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-            console.log('AudioContext resumed via user gesture.');
-        });
-    }
-}
