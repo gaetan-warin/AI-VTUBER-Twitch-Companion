@@ -15,11 +15,11 @@ export function initializeMicrophone() {
 
 export function checkMicrophoneAccess() {
     $('#microphoneOverlay').show();
-    
+
     navigator.permissions.query({ name: 'microphone' })
         .then(permissionStatus => {
             microphonePermissionState = permissionStatus.state;
-            
+
             if (permissionStatus.state === 'granted') {
                 $('#microphoneOverlay').hide();
                 updateCurrentMicrophone();
@@ -76,7 +76,7 @@ export function startRecording() {
         return;
     }
     if (!recognition) initializeSpeechRecognition();
-    
+
     if (isRecording) {
         console.log('Recording is already in progress');
         return;
@@ -89,15 +89,15 @@ export function startRecording() {
                 showNotification('error', 'Microphone access is denied. Please enable it in your browser settings.');
                 return;
             }
-            
+
             // Try to get microphone access
-            return navigator.mediaDevices.getUserMedia({ 
-                audio: { 
+            return navigator.mediaDevices.getUserMedia({
+                audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
                     channelCount: 1
-                } 
+                }
             });
         })
         .then(stream => {
@@ -106,36 +106,36 @@ export function startRecording() {
             }
 
             console.log('Microphone access granted, initializing audio context...');
-            
+
             // Create new audio context
             if (audioContext) {
                 audioContext.close();
             }
-            
+
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 audioInput = audioContext.createMediaStreamSource(stream);
                 analyser = audioContext.createAnalyser();
-                
+
                 // Connect audio nodes for visualization
                 audioInput.connect(analyser);
-                
+
                 console.log('Audio context initialized successfully');
-                
+
                 // Start recognition
                 recognition.start();
                 isRecording = true;
                 $('#startRecordingBtn').text('Stop Recording').addClass('recording');
-                
+
                 if ($('#waveToggle').is(':checked')) {
                     $('#waveCanvas').show();
                 }
-                
+
                 showNotification('info', 'Recording started. Speak now.');
-                
+
                 // Initialize visualization
                 initializeWaveVisualization(stream);
-                
+
                 // Set timeout for no speech detection
                 recognitionTimeout = setTimeout(() => {
                     if (isRecording) {
@@ -143,7 +143,7 @@ export function startRecording() {
                         showNotification('warning', 'No speech detected. Restarting...');
                     }
                 }, 10000);
-                
+
             } catch (err) {
                 console.error('Audio context initialization error:', err);
                 throw new Error('Failed to initialize audio processing');
@@ -151,7 +151,7 @@ export function startRecording() {
         })
         .catch(err => {
             console.error('Detailed microphone access error:', err);
-            
+
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                 showNotification('error', 'Microphone access was denied. Please allow microphone access in your browser settings.');
             } else if (err.name === 'NotFoundError') {
@@ -159,7 +159,7 @@ export function startRecording() {
             } else {
                 showNotification('error', `Microphone error: ${err.message || 'Unknown error'}`);
             }
-            
+
             stopRecording();
         });
 }
@@ -189,10 +189,10 @@ function updateCurrentMicrophone() {
         .then(devices => {
             const audioDevices = devices.filter(device => device.kind === 'audioinput');
             if (audioDevices.length > 0) {
-                const defaultDevice = audioDevices.find(device => device.deviceId === 'default') 
-                                   || audioDevices.find(device => device.label.toLowerCase().includes('default'))
-                                   || audioDevices[0];
-                
+                const defaultDevice = audioDevices.find(device => device.deviceId === 'default')
+                    || audioDevices.find(device => device.label.toLowerCase().includes('default'))
+                    || audioDevices[0];
+
                 $('#currentMicrophone').val(defaultDevice.label || 'Default Microphone');
             } else {
                 $('#currentMicrophone').val('No microphone detected');
@@ -213,22 +213,21 @@ function initializeSpeechRecognition() {
     recognition = new webkitSpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    
+
     recognition.lang = getLangCode($('#fixedLanguage').val());
 
     recognition.onstart = () => {
         console.log('Speech recognition started with language:', recognition.lang);
-        showNotification('info', 'Listening... Speak now');
     };
 
     recognition.onresult = (event) => {
         clearTimeout(recognitionTimeout);
         const result = event.results[event.results.length - 1];
-        
+
         if (result.isFinal) {
             const text = result[0].transcript.trim();
             console.log('Speech recognized:', text);
-            
+
             if (text) {
                 const isWakeWordEnabled = $('#wakeWordEnabled').is(':checked');
                 const wakeWord = $('#wakeWord').val().trim().toLowerCase();
@@ -280,10 +279,10 @@ function isWakeWordDetected(text, wakeWord) {
     // Handle multiple word variations
     const normalizedText = text.replace(/[.,!?]/g, '').toLowerCase();
     const normalizedWakeWord = wakeWord.replace(/[.,!?]/g, '').toLowerCase();
-    
+
     // Split wake word into parts for more flexible matching
     const wakeWordParts = normalizedWakeWord.split(' ');
-    
+
     // Check if all parts of wake word are present in correct order
     if (wakeWordParts.length > 1) {
         // For multi-word wake phrases
@@ -376,7 +375,7 @@ function drawSpectrum(analyser) {
         let barHeight;
         let x = 0;
 
-        for(let i = 0; i < bufferLength; i++) {
+        for (let i = 0; i < bufferLength; i++) {
             barHeight = dataArray[i] / 2;
 
             ctx.fillStyle = `rgb(${barHeight + 100},50,50)`;

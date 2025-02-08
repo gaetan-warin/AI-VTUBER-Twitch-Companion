@@ -204,17 +204,22 @@ def process_ai_request(data):
     if not text:
         return {'status': 'error', 'message': 'No text provided'}, 400
 
-    # Save the question to memory (chat history)
-    memory_file_path = os.path.join(app.root_path, 'static', 'doc', 'chat_memory.txt')
+    # Use username to create unique discussion file
     username = data.get('username', 'Gaëtan')
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
-    try:
-        with open(memory_file_path, 'a', encoding='utf-8') as mem_file:
-            mem_file.write(f"({timestamp}) {username}: {text}\n")
-    except Exception as e:
-        logger.error("Failed to write to memory file: %s", e)
+    discussion_file_path = os.path.join(app.root_path, 'static', 'discution', f"{username.lower()}.txt")
+    os.makedirs(os.path.dirname(discussion_file_path), exist_ok=True)
+    with open(discussion_file_path, 'a', encoding='utf-8') as disc_file:
+        disc_file.write(f"({datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}) {username} - {text}\n")
 
     sanitized_input = bleach.clean(text)
+
+    # New: Build conversation history from last 20 lines of the discussion file
+    conversation_history = []
+    if os.path.exists(discussion_file_path):
+        with open(discussion_file_path, 'r', encoding='utf-8') as conv_file:
+            lines = conv_file.read().splitlines()
+            for line in lines[-20:]:
+                conversation_history.append({"role": "user", "content": line.strip()})
 
     # Detect input language or use fixed language for microphone input
     if source == 'microphone' and fixed_language:
@@ -233,19 +238,18 @@ def process_ai_request(data):
     # Get relevant documents from RAG handler
     retrieved_docs = rag_handler.get_relevant_documents(sanitized_input) if config.ask_rag else []
 
-    # Build messages for API call
-    if not config.ask_rag or len(retrieved_docs) == 0:
-        system_message = f"Persona:\nName: {config.persona_name}\nRole: {config.persona_role}\nInstructions: {language_instruction}{config.pre_prompt}"
-        user_message = sanitized_input
+    # Build system message
+    system_message = f"Persona:\nName: {config.persona_name}\nRole: {config.persona_role}\nInstructions: {language_instruction}{config.pre_prompt}"
+    if config.ask_rag and retrieved_docs:
+        user_message = f"This is your memory. If you can answer based on it, do so. If not, forget about this and answer freely.\n\nMemory:\n{retrieved_docs}\n\nQuestion: {sanitized_input}"
     else:
-        print(f"MEMORY SYSTEM documents retrived: {retrieved_docs}")
-        system_message = f"Persona:\nName: {config.persona_name}\nRole: {config.persona_role}\nInstructions: {language_instruction}{config.pre_prompt}"
-        user_message = f"This is your memory. If you can answer based on it, do so. If not, forgot about this and feel free to answer freely.\n\nMemory:\n{retrieved_docs}\n\nQuestion: {sanitized_input}"
+        user_message = sanitized_input
 
-    messages = [
-        {"role": "system", "content": system_message.strip()},
-        {"role": "user", "content": user_message.strip()}
-    ]
+    # Include conversation history as context
+    messages = [{"role": "system", "content": system_message.strip()}]
+    if conversation_history:
+        messages.extend(conversation_history)
+    messages.append({"role": "user", "content": user_message.strip()})
 
     try:
         ollama_start_time = time.time()
