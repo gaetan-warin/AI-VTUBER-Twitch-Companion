@@ -147,7 +147,6 @@ def get_model_files(modelName):
     if not os.path.isdir(models_dir):
         return jsonify({"files": []})
     files = [f for f in os.listdir(models_dir) if f.endswith('.json')]
-    print(files)
     return jsonify({"files": files})
 
 # Helper functions
