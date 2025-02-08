@@ -132,7 +132,7 @@ function setupAvatarModel() {
 }
 
 function setupTwitchFields() {
-    $('#TWITCH_TOKEN, #clientId').addClass('blurry')
+    $('#twitchToken, #twitchClientSecret, #clientId').addClass('blurry')
         .on('focus', function () { $(this).removeClass('blurry'); })
         .on('blur', function () { $(this).addClass('blurry'); });
 }
