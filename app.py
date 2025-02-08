@@ -229,10 +229,10 @@ def process_ai_request(data):
         except LangDetectException:
             detected_language = 'en'
 
-    print(f"Using language: {detected_language}")
+    print(f"Answer only in this language: {detected_language}")
 
     # Build language-specific prompt
-    language_instruction = f"Please respond in {detected_language} language. "
+    language_instruction = f"Answer only in this language: {detected_language}. "
 
     # Get relevant documents from RAG handler
     retrieved_docs = rag_handler.get_relevant_documents(sanitized_input) if config.ask_rag else []
@@ -243,7 +243,7 @@ def process_ai_request(data):
         user_message = f"This is your memory. If you can answer based on it, do so. If not, forget about this and answer freely.\n\nMemory:\n{retrieved_docs}\n\nQuestion: {sanitized_input}"
     else:
         user_message = sanitized_input
-
+    print("conversation_history before AI call: ", conversation_history)
     # Include conversation history as context
     messages = [{"role": "system", "content": system_message.strip()}]
     if conversation_history:
@@ -487,6 +487,7 @@ def handle_trigger_ai_request(data):
     try:
         response, status_code = process_ai_request({
             'text': data.get('message', '').strip(),
+            'username': data.get('username', '').strip(),
             'source': 'twitch'
         })
         if status_code == 200:

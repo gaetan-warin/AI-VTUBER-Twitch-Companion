@@ -154,7 +154,7 @@ class TwitchBot(commands.Bot):
 
         try:
             sanitized_input = bleach.clean(user_input)
-            socket.emit('trigger_ai_request', {'message': sanitized_input})
+            socket.emit('trigger_ai_request', {'username': message.author.name, 'message': sanitized_input})
             socket.emit('display_question', {'username': message.author.name, 'question': sanitized_input})
         except Exception as e:
             logger.error(f"Error processing AI request: {e}")
