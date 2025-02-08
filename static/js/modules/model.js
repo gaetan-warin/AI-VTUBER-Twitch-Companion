@@ -74,17 +74,20 @@ function updateMouthState(value) {
         mouthState.value = value;
 }
 
-export function getModelPath(selectedModel) {
-    switch (selectedModel) {
-        case 'haru':
-            return `models/${selectedModel}/haru_greeter_t03.model3.json`;
-        case 'mark':
-            return `models/${selectedModel}/mark_free_t04.model3.json`;
-        case 'Hiyori':
-            return `models/${selectedModel}/Hiyori.model3.json`;
-        case 'Natori':
-            return `models/${selectedModel}/Natori.model3.json`;
-        default:
-            return `models/${selectedModel}/${selectedModel}.model.json`;
+export async function getModelPath(selectedModel) {
+    try {
+        const response = await fetch(`/api/models/${selectedModel}`);
+        const data = await response.json();
+        if (data.files && data.files.length > 0) {
+            // Prefer file ending with 'model3.json' if available
+            const file = data.files.find(f => f.endsWith('model3.json')) || data.files[0];
+            return `models/${selectedModel}/${file}`;
+        } else {
+            console.error('No model files found for', selectedModel);
+            return "";
+        }
+    } catch (err) {
+        console.error('Error fetching model files:', err);
+        return "";
     }
 }

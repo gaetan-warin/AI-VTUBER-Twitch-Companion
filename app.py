@@ -139,6 +139,16 @@ def store_twitch_token():
     socketio.emit('update_twitch_token', {'twitchToken': access_token})
     return jsonify({'status': 'success', 'twitchToken': access_token})
 
+# New API endpoint to list JSON files for a model
+@app.route('/api/models/<modelName>')
+def get_model_files(modelName):
+    models_dir = os.path.join(app.root_path, 'models', modelName)
+    if not os.path.isdir(models_dir):
+        return jsonify({"files": []})
+    files = [f for f in os.listdir(models_dir) if f.endswith('.json')]
+    print(files)
+    return jsonify({"files": files})
+
 # Helper functions
 def get_directory_contents(directory):
     """Return a list of subdirectory names in the given directory."""

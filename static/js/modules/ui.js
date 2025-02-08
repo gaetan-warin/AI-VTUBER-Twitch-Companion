@@ -130,11 +130,10 @@ function setupBackgroundImage() {
         }
     });
 }
-
-function setupAvatarModel() {
-    $('#avatarModel').on('change', function () {
+async function setupAvatarModel() {
+    $('#avatarModel').on('change', async function () {
         const selectedModel = $(this).val();
-        const modelPath = getModelPath(selectedModel);
+        const modelPath = await getModelPath(selectedModel);
         loadAvatarModel(modelPath);
     });
 }
