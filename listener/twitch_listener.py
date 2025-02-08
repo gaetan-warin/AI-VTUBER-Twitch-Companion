@@ -32,6 +32,8 @@ class Config:
         self.load()
 
     def load(self):
+        from dotenv import load_dotenv  # ensure we import here
+        load_dotenv(override=True, encoding='latin1')  # Force reload .env values
         for field in self.fields:
             value = os.getenv(field)
             setattr(self, field.lower(), value)
