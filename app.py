@@ -11,9 +11,7 @@ import subprocess
 import time
 import bleach
 import eventlet
-from flask import Flask, render_template, send_from_directory, abort, request, redirect, session, jsonify
-import requests
-import urllib.parse
+from flask import Flask, render_template, send_from_directory, abort, request, jsonify
 from flask_socketio import SocketIO
 from dotenv import load_dotenv, find_dotenv
 import ollama
