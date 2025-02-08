@@ -1,5 +1,5 @@
 import { speak } from './speech.js';
-import { showQuestionDisplay, handleInitialConfig, handleSaveConfigResponse, handleListenerUpdate } from './ui.js';
+import { showQuestionDisplay, handleInitialConfig, handleSaveConfigResponse, handleListenerUpdate, updateTwitchToken } from './ui.js';
 import { triggerFireworks } from './effects.js';
 import { loadAvatarModel } from './model.js';
 import { handleDocumentsList, handleDocumentDeleted, handleDocumentUploaded } from './fileManager.js';
@@ -24,15 +24,13 @@ export function initializeSocket() {
     });
     socket.on('display_question', showQuestionDisplay);
     socket.on('fireworks', triggerFireworks);
-    socket.on('model_path', data => {
-        console.log("Received model path:", data.path);
-        loadAvatarModel(data.path);
-    });
+    socket.on('model_path', data => loadAvatarModel(data.path));
     socket.on('save_config_response', handleSaveConfigResponse);
     socket.on('listener_update', handleListenerUpdate);
     socket.on('documents_list', handleDocumentsList);
     socket.on('document_deleted', handleDocumentDeleted);
     socket.on('document_uploaded', handleDocumentUploaded);
+    socket.on('update_twitch_token', (data) => updateTwitchToken(data));
 }
 
 export function askAI(text) {

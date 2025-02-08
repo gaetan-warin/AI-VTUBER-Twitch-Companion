@@ -11,7 +11,9 @@ import subprocess
 import time
 import bleach
 import eventlet
-from flask import Flask, render_template, send_from_directory, abort
+from flask import Flask, render_template, send_from_directory, abort, request, redirect, session
+import requests
+import urllib.parse
 from flask_socketio import SocketIO
 from dotenv import load_dotenv, find_dotenv
 import ollama
@@ -32,6 +34,7 @@ load_dotenv(dotenv_path, encoding='latin1')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'supersecret')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -117,6 +120,71 @@ def serve_model_files(filename):
     if os.path.isfile(os.path.join(models_dir, filename)):
         return send_from_directory(models_dir, filename)
     return abort(404)
+
+CLIENT_ID = os.environ.get('CLIENT_ID')
+CLIENT_SECRET = os.environ.get('TWITCH_CLIENT_SECRET')
+REDIRECT_URI = os.environ.get('TWITCH_REDIRECT_URI', 'http://localhost:5000/auth/twitch/callback')
+SCOPE = 'user:read:email'
+
+@app.route('/auth/twitch')
+def auth_twitch():
+    params = {
+        'client_id': CLIENT_ID,
+        'redirect_uri': REDIRECT_URI,
+        'response_type': 'code',
+        'scope': SCOPE
+    }
+    auth_url = "https://id.twitch.tv/oauth2/authorize?" + urllib.parse.urlencode(params)
+    return redirect(auth_url)
+
+@app.route('/auth/twitch/callback')
+def auth_twitch_callback():
+    code = request.args.get('code')
+    if not code:
+        return "Missing code parameter", 400
+    token_url = "https://id.twitch.tv/oauth2/token"
+    payload = {
+        'client_id': CLIENT_ID,
+        'client_secret': CLIENT_SECRET,
+        'code': code,
+        'grant_type': 'authorization_code',
+        'redirect_uri': REDIRECT_URI
+    }
+    token_response = requests.post(token_url, params=payload)
+    if token_response.status_code != 200:
+        error_details = token_response.text
+        app.logger.error("Failed to fetch token from Twitch: %s", error_details)
+        html_content = f"""
+<html>
+  <body>
+    <script>
+      window.opener.postMessage({{"error": "Failed to fetch token from Twitch", "details": {repr(error_details)} }}, window.location.origin);
+      window.close();
+    </script>
+    <p>Authentication failed. You can close this window.</p>
+  </body>
+</html>
+"""
+        return html_content, 500
+    token_data = token_response.json()
+    access_token = token_data.get('access_token')
+    print(f"Access token: {access_token}")
+    # Update config with new token and save into .env
+    config.twitch_token = access_token
+    config.save()
+    socketio.emit('update_twitch_token', {'twitchToken': access_token})
+    html_content = f"""
+<html>
+  <body>
+    <script>
+      window.opener.postMessage({{"accessToken": "{access_token}", "clientId": "{CLIENT_ID}"}}, window.location.origin);
+      window.close();
+    </script>
+    <p>Authentication successful. You can close this window.</p>
+  </body>
+</html>
+"""
+    return html_content
 
 # Helper functions
 def get_directory_contents(directory):

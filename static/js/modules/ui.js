@@ -82,6 +82,12 @@ function setupEventListeners() {
     });
 
     $('#fileManager').on('click', openFileManagerModal);
+
+    $('#twitchConnectBtn').on('click', connectToTwitch);
+}
+
+function connectToTwitch() {
+    window.open('/auth/twitch', 'TwitchAuth', 'width=600,height=800');
 }
 
 function toggleSidebar() {
@@ -241,4 +247,10 @@ export function handleListenerUpdate(data) {
     } else {
         alert(`Failed to ${data.action} listener: ${data.message}`);
     }
+}
+
+export function updateTwitchToken(data) {
+    const twitchTokenInput = document.getElementById('twitchToken');
+    if (twitchTokenInput)
+        twitchTokenInput.value = data.twitchToken;
 }
