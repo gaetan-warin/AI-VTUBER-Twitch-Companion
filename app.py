@@ -22,6 +22,7 @@ from langdetect.lang_detect_exception import LangDetectException
 import fitz  # PyMuPDF
 from utils.rag_handler import RAGHandler
 from utils.file_manager import FileManager, setup_file_manager_routes
+import datetime  # add at top if not present
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True)
@@ -30,7 +31,7 @@ eventlet.monkey_patch(thread=True, os=True, select=True)
 dotenv_path = find_dotenv()
 if not dotenv_path:
     dotenv_path = find_dotenv('.env.example')
-load_dotenv(dotenv_path, encoding='latin1')
+load_dotenv(dotenv_path, encoding='utf-8')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
@@ -76,7 +77,7 @@ class Config:
     def save(self):
         """Persist current configuration to the environment file."""
         env_file_path = find_dotenv()
-        with open(env_file_path, 'w', encoding='latin1') as f:
+        with open(env_file_path, 'w', encoding='utf-8') as f:  # changed encoding to utf-8
             for field in self.fields:
                 value = getattr(self, field.lower())
                 if value is not None:
@@ -203,6 +204,16 @@ def process_ai_request(data):
     if not text:
         return {'status': 'error', 'message': 'No text provided'}, 400
 
+    # Save the question to memory (chat history)
+    memory_file_path = os.path.join(app.root_path, 'static', 'doc', 'chat_memory.txt')
+    username = data.get('username', 'Gaëtan')
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    try:
+        with open(memory_file_path, 'a', encoding='utf-8') as mem_file:
+            mem_file.write(f"({timestamp}) {username}: {text}\n")
+    except Exception as e:
+        logger.error("Failed to write to memory file: %s", e)
+
     sanitized_input = bleach.clean(text)
 
     # Detect input language or use fixed language for microphone input
@@ -227,8 +238,9 @@ def process_ai_request(data):
         system_message = f"Persona:\nName: {config.persona_name}\nRole: {config.persona_role}\nInstructions: {language_instruction}{config.pre_prompt}"
         user_message = sanitized_input
     else:
+        print(f"MEMORY SYSTEM documents retrived: {retrieved_docs}")
         system_message = f"Persona:\nName: {config.persona_name}\nRole: {config.persona_role}\nInstructions: {language_instruction}{config.pre_prompt}"
-        user_message = f"Based on the following information, answer the question:\n\n{retrieved_docs}\n\nQuestion: {sanitized_input}"
+        user_message = f"This is your memory. If you can answer based on it, do so. If not, forgot about this and feel free to answer freely.\n\nMemory:\n{retrieved_docs}\n\nQuestion: {sanitized_input}"
 
     messages = [
         {"role": "system", "content": system_message.strip()},

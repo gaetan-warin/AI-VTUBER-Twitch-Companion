@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Load configuration
-load_dotenv(encoding='latin1')
+load_dotenv(encoding='utf-8')
 
 class Config:
     def __init__(self):
