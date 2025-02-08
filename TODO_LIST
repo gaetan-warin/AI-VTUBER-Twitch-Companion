@@ -1,10 +1,12 @@
 V1.1 Web improvement
-    Refactor (Testing & cleaning code)
-    Twitch => Regarding the person who send the message he should be able to manage to keep conversation or switch subject. How to track history.
+    Check Twitch logic retreive info connected or not
+    Test twitch connection with listener
+    Refactor(Testing & cleaning code)
+    Twitch => Regarding the person who send the message he should be able to manage to keep conversation or switch subject.How to track history.
 
-V2.0 Companion as an app
+    V2.0 Companion as an app
     Companion as an APP => Electron JS instead of Web Browser,
     Possibility to share screen ? How to ? Picture Each 3 sec, how to provide llm picture to make him answer on content ?
-    UI CFG => LLM Management extension (use Local)
+    UI CFG => LLM Management extension(use Local)
     Functionnality, Search on web ?
     Functionnality, give him controle of computer ? To accomplish task.
