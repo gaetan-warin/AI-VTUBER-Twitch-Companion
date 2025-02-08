@@ -81,7 +81,7 @@ class Config:
             for field in self.fields:
                 value = getattr(self, field.lower())
                 if value is not None:
-                    f.write(f"{field}={value}\n")
+                    f.write(f'{field}="{value}"\n')
 
     def to_dict(self):
         """Return the configuration settings as a dictionary."""
