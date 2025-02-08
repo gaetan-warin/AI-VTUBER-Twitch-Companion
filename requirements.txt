@@ -3,11 +3,11 @@ flask-socketio==5.3.2
 eventlet==0.33.3
 requests==2.31.0
 twitchio==2.3.0
-python-dotenv==0.21.1
+python-dotenv==1.0.1
 bleach==6.0.0
 ollama==0.1.0
-python-socketio==5.7.2
+python-socketio==5.12.1
 langdetect==1.0.9
-humanize==4.10.0
-numpy==1.26.0
-fitz==0.1.0
+humanize==4.11.0
+numpy==2.2.2
+PyMuPDF==1.25.3
