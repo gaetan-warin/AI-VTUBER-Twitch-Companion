@@ -35,7 +35,7 @@ class Config:
         for field in self.fields:
             value = os.getenv(field)
             setattr(self, field.lower(), value)
-        
+
         # Convert numeric values
         self.extra_delay_listener = float(self.extra_delay_listener)
         self.nb_spam_message = float(self.nb_spam_message)
@@ -45,7 +45,7 @@ class Config:
         for key, value in kwargs.items():
             if key.upper() in self.fields:
                 setattr(self, key.lower(), value)
-        
+
         # Convert numeric values
         if 'EXTRA_DELAY_LISTENER' in kwargs:
             self.extra_delay_listener = float(self.extra_delay_listener)

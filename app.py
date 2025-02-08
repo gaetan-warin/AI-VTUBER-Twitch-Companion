@@ -325,7 +325,8 @@ def handle_save_config(data):
         config.update(**data)
         socketio.emit('update_twitch_config', {k: v for k, v in data.items() if k in [
             'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE', 'BOT_NAME_FOLLOW_SUB',
-            'KEY_WORD_FOLLOW', 'KEY_WORD_SUB', 'DELIMITER_NAME', 'DELIMITER_NAME_END'
+            'KEY_WORD_FOLLOW', 'KEY_WORD_SUB', 'DELIMITER_NAME', 'DELIMITER_NAME_END',
+            'CHANNEL_NAME'
         ]})
         socketio.emit('save_config_response', {'status': 'success', 'config': config.to_dict()})
     # Example: catch IO errors explicitly
