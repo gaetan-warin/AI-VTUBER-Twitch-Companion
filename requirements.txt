@@ -11,4 +11,3 @@ langdetect==1.0.9
 humanize==4.10.0
 numpy==1.26.0
 fitz==0.1.0
-
