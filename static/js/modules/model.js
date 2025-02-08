@@ -80,12 +80,10 @@ export function getModelPath(selectedModel) {
             return `models/${selectedModel}/haru_greeter_t03.model3.json`;
         case 'mark':
             return `models/${selectedModel}/mark_free_t04.model3.json`;
-        case 'miku':
-            return `models/${selectedModel}/miku.model3.json`;
-        case 'hibiki':
-            return `models/${selectedModel}/hibiki.model3.json`;
-        case 'Epsilon':
-            return `models/${selectedModel}/Epsilon_free.model3.json`;
+        case 'Hiyori':
+            return `models/${selectedModel}/Hiyori.model3.json`;
+        case 'Natori':
+            return `models/${selectedModel}/Natori.model3.json`;
         default:
             return `models/${selectedModel}/${selectedModel}.model.json`;
     }
