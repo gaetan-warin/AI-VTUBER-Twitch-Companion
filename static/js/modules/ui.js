@@ -20,14 +20,14 @@ export function setupUI() {
 }
 
 function setupEventListeners() {
-    $('#speakBtn, #askAIBtn').on('click', function() {
+    $('#speakBtn, #askAIBtn').on('click', function () {
         if (!areVoicesReady()) {
             alert("Speech synthesis voices are not loaded yet. Please wait a moment and try again.");
             return;
         }
         const text = $('#makeItSpeak').val().trim();
         if (text) {
-            emit(this.id === 'speakBtn' ? 'speak' : 'ask_ai', { 
+            emit(this.id === 'speakBtn' ? 'speak' : 'ask_ai', {
                 text,
                 source: 'text'
             });
@@ -43,7 +43,7 @@ function setupEventListeners() {
             }
             const text = event.target.value.trim();
             if (text) {
-                emit('speak', { 
+                emit('speak', {
                     text,
                     fixedLanguage: $('#fixedLanguage').val()
                 });
@@ -73,7 +73,7 @@ function setupEventListeners() {
             username: 'TestUser'
         });
     });
-    
+
     $('#testSubBtn').on('click', () => {
         emit('trigger_event', {
             event_type: 'sub',
@@ -99,18 +99,26 @@ function switchTab() {
 }
 
 function setupBackgroundImage() {
-    $('#backgroundImage').on('change', function() {
+    $('#backgroundImage').on('change', function () {
         const selectedImage = $(this).val();
-        $('body').css({
-            backgroundImage: `url('/static/images/background/${selectedImage}')`,
-            backgroundPosition: 'center',
-            backgroundSize: 'cover'
-        });
+        if (selectedImage === 'greenscreen') {
+            $('body').css({
+                backgroundImage: 'none',
+                backgroundColor: '#00ff00'
+            });
+        } else {
+            $('body').css({
+                backgroundImage: `url('/static/images/background/${selectedImage}')`,
+                backgroundPosition: 'center',
+                backgroundSize: 'cover',
+                backgroundColor: ''
+            });
+        }
     });
 }
 
 function setupAvatarModel() {
-    $('#avatarModel').on('change', function() {
+    $('#avatarModel').on('change', function () {
         const selectedModel = $(this).val();
         const modelPath = getModelPath(selectedModel);
         loadAvatarModel(modelPath);
@@ -119,8 +127,8 @@ function setupAvatarModel() {
 
 function setupTwitchFields() {
     $('#TWITCH_TOKEN, #clientId').addClass('blurry')
-        .on('focus', function() { $(this).removeClass('blurry'); })
-        .on('blur', function() { $(this).addClass('blurry'); });
+        .on('focus', function () { $(this).removeClass('blurry'); })
+        .on('blur', function () { $(this).addClass('blurry'); });
 }
 
 function setupRecordingButton() {
@@ -134,7 +142,7 @@ function setupRecordingButton() {
 }
 
 function setupWaveToggle() {
-    $('#waveToggle').on('change', function() {
+    $('#waveToggle').on('change', function () {
         if (isCurrentlyRecording()) {
             $('#waveCanvas').toggle($(this).is(':checked'));
         }
@@ -192,21 +200,24 @@ export function handleInitialConfig(data) {
         Promise.all(populationPromises)
             .then(() => {
                 console.log('All fields populated');
+                if (!$('#backgroundImage option[value="greenscreen"]').length)
+                    $('#backgroundImage').append(new Option('greenscreen', 'greenscreen'));
+
                 // Set configuration before other UI updates
                 config.set(configData);
-                
+
                 // Explicitly set wake word checkbox state
                 const $wakeWordCheckbox = $('#wakeWordEnabled');
                 $wakeWordCheckbox.prop('checked', configData.WAKE_WORD_ENABLED === true);
-                
+
                 // Update wake word container visibility
                 $('#wakeWordContainer').toggle($wakeWordCheckbox.is(':checked'));
-                
+
                 // Set fixed language if available
                 if (configData.FIXED_LANGUAGE) {
                     $('#fixedLanguage').val(configData.FIXED_LANGUAGE);
                 }
-                
+
                 checkListenerStatus();
             })
             .catch(error => {
