@@ -87,14 +87,14 @@ function setupEventListeners() {
 }
 
 function connectToTwitch() {
-    // Revert to opening a popup window for Twitch authentication
     const twitchClientId = $('#twitchClientId').val();
-    const redirectUri = window.location.origin + '/auth/twitch/callback';
+    const redirectUri = 'http://localhost:5000/auth/twitch/callback';
+    // Use non-encoded redirectUri if your Twitch dashboard is configured with the decoded URL
     if (!twitchClientId) {
         alert("Twitch Client ID is not configured.");
         return;
     }
-    const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=chat:read+chat:edit`;
+    const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClientId}&redirect_uri=${redirectUri}&response_type=token&scope=chat:read+chat:edit`;
     window.open(authUrl, 'TwitchAuth', 'width=600,height=600');
 }
 
