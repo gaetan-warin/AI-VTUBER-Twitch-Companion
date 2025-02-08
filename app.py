@@ -168,7 +168,6 @@ def auth_twitch_callback():
         return html_content, 500
     token_data = token_response.json()
     access_token = token_data.get('access_token')
-    print(f"Access token: {access_token}")
     # Update config with new token and save into .env
     config.twitch_token = access_token
     config.save()
