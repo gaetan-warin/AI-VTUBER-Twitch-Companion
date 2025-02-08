@@ -83,11 +83,19 @@ function setupEventListeners() {
 
     $('#fileManager').on('click', openFileManagerModal);
 
-    $('#twitchConnectBtn').on('click', connectToTwitch);
+    $('#twitchConnectBtn').off('click').on('click', connectToTwitch);
 }
 
 function connectToTwitch() {
-    window.open('/auth/twitch', 'TwitchAuth', 'width=600,height=800');
+    // Revert to opening a popup window for Twitch authentication
+    const twitchClientId = $('#twitchClientId').val();
+    const redirectUri = window.location.origin + '/auth/twitch/callback';
+    if (!twitchClientId) {
+        alert("Twitch Client ID is not configured.");
+        return;
+    }
+    const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=chat:read+chat:edit`;
+    window.open(authUrl, 'TwitchAuth', 'width=600,height=600');
 }
 
 function toggleSidebar() {
@@ -132,7 +140,7 @@ function setupAvatarModel() {
 }
 
 function setupTwitchFields() {
-    $('#twitchToken, #twitchClientSecret, #clientId').addClass('blurry')
+    $('#twitchToken, #twitchClientId').addClass('blurry')
         .on('focus', function () { $(this).removeClass('blurry'); })
         .on('blur', function () { $(this).addClass('blurry'); });
 }

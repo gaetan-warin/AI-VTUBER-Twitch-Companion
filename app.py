@@ -11,7 +11,7 @@ import subprocess
 import time
 import bleach
 import eventlet
-from flask import Flask, render_template, send_from_directory, abort, request, redirect, session
+from flask import Flask, render_template, send_from_directory, abort, request, redirect, session, jsonify
 import requests
 import urllib.parse
 from flask_socketio import SocketIO
@@ -48,13 +48,13 @@ class Config:
     def __init__(self):
         self.fields = [
             'PERSONA_NAME', 'PERSONA_ROLE', 'PRE_PROMPT', 'AVATAR_MODEL', 'BACKGROUND_IMAGE',
-            'CHANNEL_NAME', 'TWITCH_TOKEN', 'CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
+            'CHANNEL_NAME', 'TWITCH_TOKEN', 'TWITCH_CLIENT_ID', 'EXTRA_DELAY_LISTENER', 'NB_SPAM_MESSAGE',
             'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
             'DELIMITER_NAME', 'DELIMITER_NAME_END', 'SOCKETIO_IP', 'SOCKETIO_IP_PORT',
             'SOCKETIO_CORS_ALLOWED', 'API_URL', 'API_URL_PORT', 'FIXED_LANGUAGE', 'VOICE_GENDER',
             'WAKE_WORD', 'WAKE_WORD_ENABLED', 'CELEBRATE_FOLLOW', 'CELEBRATE_SUB',
             'CELEBRATE_FOLLOW_MESSAGE', 'CELEBRATE_SUB_MESSAGE', 'CELEBRATE_SOUND',
-            'SPEECH_BUBBLE_ENABLED', 'ASK_RAG', 'TWITCH_CLIENT_SECRET'
+            'SPEECH_BUBBLE_ENABLED', 'ASK_RAG'
         ]
         self.load()
 
@@ -121,69 +121,23 @@ def serve_model_files(filename):
         return send_from_directory(models_dir, filename)
     return abort(404)
 
-CLIENT_ID = os.environ.get('CLIENT_ID')
-CLIENT_SECRET = os.environ.get('TWITCH_CLIENT_SECRET')
-REDIRECT_URI = os.environ.get('TWITCH_REDIRECT_URI', 'http://localhost:5000/auth/twitch/callback')
-SCOPE = 'user:read:email'
-
-@app.route('/auth/twitch')
-def auth_twitch():
-    params = {
-        'client_id': CLIENT_ID,
-        'redirect_uri': REDIRECT_URI,
-        'response_type': 'code',
-        'scope': SCOPE
-    }
-    auth_url = "https://id.twitch.tv/oauth2/authorize?" + urllib.parse.urlencode(params)
-    return redirect(auth_url)
-
+# New route to render the callback page that extracts the token from URL hash
 @app.route('/auth/twitch/callback')
-def auth_twitch_callback():
-    code = request.args.get('code')
-    if not code:
-        return "Missing code parameter", 400
-    token_url = "https://id.twitch.tv/oauth2/token"
-    payload = {
-        'client_id': CLIENT_ID,
-        'client_secret': CLIENT_SECRET,
-        'code': code,
-        'grant_type': 'authorization_code',
-        'redirect_uri': REDIRECT_URI
-    }
-    token_response = requests.post(token_url, params=payload)
-    if token_response.status_code != 200:
-        error_details = token_response.text
-        app.logger.error("Failed to fetch token from Twitch: %s", error_details)
-        html_content = f"""
-<html>
-  <body>
-    <script>
-      window.opener.postMessage({{"error": "Failed to fetch token from Twitch", "details": {repr(error_details)} }}, window.location.origin);
-      window.close();
-    </script>
-    <p>Authentication failed. You can close this window.</p>
-  </body>
-</html>
-"""
-        return html_content, 500
-    token_data = token_response.json()
-    access_token = token_data.get('access_token')
-    # Update config with new token and save into .env
-    config.twitch_token = access_token
-    config.save()
+def twitch_callback():
+    return render_template('twitch_callback.html')
+
+# New route to receive the access token via POST, update config, and notify UI
+@app.route('/auth/twitch/store_token', methods=['POST'])
+def store_twitch_token():
+    data = request.get_json()
+    access_token = data.get('access_token')
+    if not access_token:
+        return jsonify({'status': 'error', 'message': 'No access token provided'}), 400
+    # Update configuration with the new token
+    config.update(TWITCH_TOKEN=access_token)
+    # Emit the updated token to the UI
     socketio.emit('update_twitch_token', {'twitchToken': access_token})
-    html_content = f"""
-<html>
-  <body>
-    <script>
-      window.opener.postMessage({{"accessToken": "{access_token}", "clientId": "{CLIENT_ID}"}}, window.location.origin);
-      window.close();
-    </script>
-    <p>Authentication successful. You can close this window.</p>
-  </body>
-</html>
-"""
-    return html_content
+    return jsonify({'status': 'success', 'twitchToken': access_token})
 
 # Helper functions
 def get_directory_contents(directory):
