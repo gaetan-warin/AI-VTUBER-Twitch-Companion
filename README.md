@@ -1,5 +1,7 @@
 # AI Chat Twitch Bot with Live2D Avatar
 
+![Chat Bot Image](https://mywebsuccess.be/wp-content/uploads/2025/02/2025-02-08-23_48_06-NVIDIA-GeForce-Overlay.png)
+
 This project implements an AI chatbot that interacts with Twitch chat using a Live2D avatar to animate and speak in response to user input. The system leverages WebSockets for real-time communication between the frontend (browser) and backend (Flask server), integrates speech synthesis for the avatar's dialogue, and uses Ollama for local LLM-powered responses.
 
 ## Features
