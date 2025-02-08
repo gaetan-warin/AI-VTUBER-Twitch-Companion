@@ -17,7 +17,7 @@ export async function loadModel(app, modelPath) {
         // Model positioning
         model.anchor.set(0.5, 0.5);
         model.position.set(innerWidth / 2, innerHeight / 2);
-        
+
         // Model sizing
         const size = Math.min(innerWidth, innerHeight) * 0.8;
         model.width = size;
@@ -75,7 +75,18 @@ function updateMouthState(value) {
 }
 
 export function getModelPath(selectedModel) {
-    return selectedModel === 'mao_pro' ? `models/${selectedModel}/mao_pro.model3.json` :
-           selectedModel === 'haru' ? `models/${selectedModel}/haru_greeter_t03.model3.json` :
-           `models/${selectedModel}/${selectedModel}.model.json`;
+    switch (selectedModel) {
+        case 'haru':
+            return `models/${selectedModel}/haru_greeter_t03.model3.json`;
+        case 'mark':
+            return `models/${selectedModel}/mark_free_t04.model3.json`;
+        case 'miku':
+            return `models/${selectedModel}/miku.model3.json`;
+        case 'hibiki':
+            return `models/${selectedModel}/hibiki.model3.json`;
+        case 'Epsilon':
+            return `models/${selectedModel}/Epsilon_free.model3.json`;
+        default:
+            return `models/${selectedModel}/${selectedModel}.model.json`;
+    }
 }
