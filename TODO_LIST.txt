@@ -1,6 +1,9 @@
 V2.0 Companion as an app
-    Companion as an APP => Electron JS instead of Web Browser,
     Possibility to share screen ? How to ? Picture Each 3 sec, how to provide llm picture to make him answer on content ?
-    UI CFG => LLM Management extension(use Local)
     Functionnality, Search on web ?
     Functionnality, give him controle of computer ? To accomplish task.
+    hybrider le RAG avec FAISS + BM25
+    UI CFG => Provide the option to view conversation history.
+    UI CFG => LLM Management extension(use Local)
+    Change speach for costum one compatible with ElectronJS as it doesnt work withs standar recognizion
+    Companion as an APP => Electron JS instead of Web Browser,
