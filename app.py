@@ -21,6 +21,7 @@ import fitz  # PyMuPDF
 from utils.rag_handler import RAGHandler
 from utils.file_manager import FileManager, setup_file_manager_routes
 import datetime  # add at top if not present
+import base64
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True)
@@ -192,25 +193,40 @@ def get_celebration_sounds():
 
 def process_ai_request(data):
     """Process an AI request based on the input data and return a response."""
-    print(f"Processing AI request: {data}")
     start_time = time.time()
+    username = data.get('username', 'Gaëtan')
     text = data.get('text', '').strip()
     source = data.get('source', 'twitch')
     fixed_language = data.get('fixedLanguage')
 
+    # Process screenshot if provided
+    screenshot = data.get('screenshot')
+    screenshot_file_path = None
+    if screenshot:
+        try:
+            if screenshot.startswith("data:image"):
+                header, encoded = screenshot.split(',', 1)
+                image_data = base64.b64decode(encoded)
+                filename = f"ask_ai_{int(time.time())}.png"
+                screenshot_file_path = os.path.join(app.root_path, "static", "screenshots", filename)
+                os.makedirs(os.path.dirname(screenshot_file_path), exist_ok=True)
+                with open(screenshot_file_path, "wb") as f:
+                    f.write(image_data)
+            else:
+                screenshot_file_path = screenshot
+        except Exception as e:
+            print("Error processing screenshot:", e)
+            screenshot_file_path = None
+
     if not text:
         return {'status': 'error', 'message': 'No text provided'}, 400
 
-    # Use username to create unique discussion file
-    username = data.get('username', 'Gaëtan')
+    # Write discussion file and build conversation history
     discussion_file_path = os.path.join(app.root_path, 'static', 'discution', f"{username.lower()}.txt")
     os.makedirs(os.path.dirname(discussion_file_path), exist_ok=True)
     with open(discussion_file_path, 'a', encoding='utf-8') as disc_file:
         disc_file.write(f"({datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}) {username} - {text}\n")
-
     sanitized_input = bleach.clean(text)
-
-    # New: Build conversation history from last 20 lines of the discussion file
     conversation_history = []
     if os.path.exists(discussion_file_path):
         with open(discussion_file_path, 'r', encoding='utf-8') as conv_file:
@@ -218,7 +234,7 @@ def process_ai_request(data):
             for line in lines[-20:]:
                 conversation_history.append({"role": "user", "content": line.strip()})
 
-    # Detect input language or use fixed language for microphone input
+    # Detect language
     if source == 'microphone' and fixed_language:
         detected_language = fixed_language
     else:
@@ -226,62 +242,56 @@ def process_ai_request(data):
             detected_language = detect(sanitized_input)
         except LangDetectException:
             detected_language = 'en'
-
-    print(f"Answer only in this language: {detected_language}")
-
-    # Build language-specific prompt
     language_instruction = f"Answer only in this language: {detected_language}. "
 
     # Get relevant documents from RAG handler
     retrieved_docs = rag_handler.get_relevant_documents(sanitized_input) if config.ask_rag else []
 
-    # Build system message
+    # Build system message and user message (attach screenshot if exists)
     system_message = f"Persona:\nName: {config.persona_name}\nRole: {config.persona_role}\nInstructions: {language_instruction}{config.pre_prompt}"
     if config.ask_rag and retrieved_docs:
-        user_message = f"This is your memory. If you can answer based on it, do so. If not, forget about this and answer freely.\n\nMemory:\n{retrieved_docs}\n\nQuestion: {sanitized_input}"
+        user_message_content = f"This is your memory. If you can answer based on it, do so. If not, forget about this and answer freely.\n\nMemory:\n{retrieved_docs}\n\nQuestion: {sanitized_input}"
     else:
-        user_message = sanitized_input
-    print("conversation_history before AI call: ", conversation_history)
-    # Include conversation history as context
+        user_message_content = sanitized_input
+    user_message = {"role": "user", "content": user_message_content}
+    if screenshot_file_path:
+        user_message["images"] = [screenshot_file_path]
+
+    # Build messages: omit conversation history if screenshot is provided
     messages = [{"role": "system", "content": system_message.strip()}]
-    if conversation_history:
+    if not screenshot_file_path and conversation_history:
         messages.extend(conversation_history)
-    messages.append({"role": "user", "content": user_message.strip()})
+    messages.append(user_message)
 
     try:
+        print(f"messages: {messages}")
         ollama_start_time = time.time()
         response = ollama.chat(
             model=config.ollama_model,
             messages=messages
         )
+        print(f"response: {response}")
         ollama_time = time.time() - ollama_start_time
-
         cleaned_response = re.sub(
             r'<think>.*?</think>|\s+',
             ' ',
             response['message']['content'],
             flags=re.DOTALL
         ).strip()
-
-        # Detect language of the response
         try:
             response_language = detect(cleaned_response)
         except LangDetectException:
             response_language = detected_language
-
         total_time = time.time() - start_time
         print("AI Processing Times:")
         print(f"  - Model call: {config.ollama_model}")
         print(f"  - Ollama API call: {ollama_time:.2f} seconds")
         print(f"  - Total processing: {total_time:.2f} seconds")
-
         return {
             'status': 'success',
             'message': cleaned_response,
             'language': response_language
         }, 200
-
-    # Replace broad exception with explicit exceptions (e.g., ollama.ChatError, ValueError)
     except (ollama.ChatError, ValueError) as e:
         total_time = time.time() - start_time
         logger.error("AI processing error (%0.2f seconds): %s", total_time, e)

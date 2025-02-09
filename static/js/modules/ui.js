@@ -5,6 +5,13 @@ import { checkListenerStatus, startListener, stopListener, emit } from './socket
 import { areVoicesReady } from './speech.js';
 import { updateCelebrationSound } from './effects.js';
 import { initializeFileManager, openFileManagerModal } from './fileManager.js';
+import { startScreenStream, captureLastFrameFromStream, stopScreenStream } from './screenRecorder.js';
+
+// Global variable to store captured screenshot
+window.sharedScreenshot = null;
+
+// Global variable to hold the active stream
+window.screenStream = null;
 
 export function setupUI() {
     setupEventListeners();
@@ -20,17 +27,57 @@ export function setupUI() {
 }
 
 function setupEventListeners() {
-    $('#speakBtn, #askAIBtn').on('click', function () {
+    $('#speakBtn').on('click', function () {
         if (!areVoicesReady()) {
             alert("Speech synthesis voices are not loaded yet. Please wait a moment and try again.");
             return;
         }
         const text = $('#makeItSpeak').val().trim();
         if (text) {
-            emit(this.id === 'speakBtn' ? 'speak' : 'ask_ai', {
-                text,
-                source: 'text'
-            });
+            emit('speak', { text, source: 'text' });
+            $('#makeItSpeak').val('');
+        }
+    });
+
+    // Start Stream button event
+    $('#startStreamBtn').off('click').on('click', async () => {
+        try {
+            window.screenStream = await startScreenStream();
+            $('#startStreamBtn').hide();
+            $('#stopStreamBtn').show();
+        } catch (e) {
+            console.error("Stream start failed:", e);
+        }
+    });
+
+    // Stop Stream button event
+    $('#stopStreamBtn').off('click').on('click', () => {
+        if (window.screenStream) {
+            stopScreenStream(window.screenStream);
+            window.screenStream = null;
+            alert("Stream stopped.");
+            $('#stopStreamBtn').hide();
+            $('#startStreamBtn').show();
+        }
+    });
+
+    // Ask AI button event uses the active stream, capturing its last frame
+    $('#askAIBtn').off('click').on('click', async function () {
+        if (!areVoicesReady()) {
+            alert("Speech synthesis voices are not loaded yet. Please wait a moment and try again.");
+            return;
+        }
+        const text = $('#makeItSpeak').val().trim();
+        let screenshot = null;
+        if (window.screenStream) {
+            try {
+                screenshot = await captureLastFrameFromStream(window.screenStream);
+            } catch (e) {
+                console.error("Failed to capture last frame from stream:", e);
+            }
+        }
+        if (text) {
+            emit('ask_ai', { text, source: 'text', screenshot });
             $('#makeItSpeak').val('');
         }
     });
