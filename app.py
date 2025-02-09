@@ -148,6 +148,27 @@ def get_model_files(modelName):
     files = [f for f in os.listdir(models_dir) if f.endswith('.json')]
     return jsonify({"files": files})
 
+@app.route('/api/ask_ai', methods=['POST'])
+def api_ask_ai():
+    data = request.get_json()
+    response, status_code = process_ai_request(data)
+    if status_code == 200:
+        socketio.emit('ai_response', {
+            'text': response['message'],
+            'fixedLanguage': response['language']
+        })
+
+        return jsonify({
+            'status': 'success',
+            'text': response['message'],
+            'fixedLanguage': response['language']
+        }), 200
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': response.get('message', 'Error')
+        }), status_code
+
 # Helper functions
 def get_directory_contents(directory):
     """Return a list of subdirectory names in the given directory."""

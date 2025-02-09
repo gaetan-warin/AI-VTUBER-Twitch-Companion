@@ -63,22 +63,33 @@ function setupEventListeners() {
 
     // Ask AI button event uses the active stream, capturing its last frame
     $('#askAIBtn').off('click').on('click', async function () {
-        if (!areVoicesReady()) {
-            alert("Speech synthesis voices are not loaded yet. Please wait a moment and try again.");
-            return;
-        }
         const text = $('#makeItSpeak').val().trim();
-        let screenshot = null;
+        if (!text) return;
+        const payload = { text };
         if (window.screenStream) {
             try {
-                screenshot = await captureLastFrameFromStream(window.screenStream);
+                payload.screenshot = await captureLastFrameFromStream(window.screenStream);
             } catch (e) {
                 console.error("Failed to capture last frame from stream:", e);
             }
-        }
-        if (text) {
-            emit('ask_ai', { text, source: 'text', screenshot });
-            $('#makeItSpeak').val('');
+            try {
+                const response = await fetch('/api/ask_ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    showNotification("success", result.text);
+                } else {
+                    showNotification("error", result.message);
+                }
+            } catch (error) {
+                console.error("Error asking AI:", error);
+                showNotification("error", "Failed to process AI request");
+            }
+        } else {
+            emit('ask_ai', payload);
         }
     });
 
