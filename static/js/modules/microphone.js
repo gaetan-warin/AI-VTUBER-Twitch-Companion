@@ -1,6 +1,6 @@
 import { socket } from './socket.js';
 import { areVoicesReady } from './speech.js';
-import { showNotification } from './ui.js';
+import { showNotification, askAIRequest } from './ui.js';
 
 export let microphonePermissionState = 'prompt';
 let recognition = null;
@@ -237,11 +237,7 @@ function initializeSpeechRecognition() {
                 if (!isWakeWordEnabled || (wakeWord && isWakeWordDetected(textLower, wakeWord))) {
                     // Send the full text as command, no wake word removal
                     const selectedLanguage = $('#fixedLanguage').val();
-                    socket.emit('ask_ai', {
-                        text: text, // Use full text including wake word
-                        source: 'microphone',
-                        fixedLanguage: selectedLanguage
-                    });
+                    handleMicrophoneAIRequest(text, selectedLanguage);
                     console.log('Wake word detected, processing command:', text);
                 } else {
                     console.log('No wake word detected in:', text);
@@ -390,4 +386,13 @@ function drawSpectrum(analyser) {
 
 export function isCurrentlyRecording() {
     return isRecording;
+}
+
+function handleMicrophoneAIRequest(text, selectedLanguage) {
+    const payload = {
+        text, // Use full text including wake word
+        source: 'microphone',
+        fixedLanguage: selectedLanguage
+    };
+    askAIRequest(payload);
 }

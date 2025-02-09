@@ -66,31 +66,7 @@ function setupEventListeners() {
         const text = $('#makeItSpeak').val().trim();
         if (!text) return;
         const payload = { text };
-        if (window.screenStream) {
-            try {
-                payload.screenshot = await captureLastFrameFromStream(window.screenStream);
-            } catch (e) {
-                console.error("Failed to capture last frame from stream:", e);
-            }
-            try {
-                const response = await fetch('/api/ask_ai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    showNotification("success", result.text);
-                } else {
-                    showNotification("error", result.message);
-                }
-            } catch (error) {
-                console.error("Error asking AI:", error);
-                showNotification("error", "Failed to process AI request");
-            }
-        } else {
-            emit('ask_ai', payload);
-        }
+        await askAIRequest(payload);
     });
 
     $('#makeItSpeak').on('keydown', event => {
@@ -318,4 +294,29 @@ export function updateTwitchToken(data) {
     const twitchTokenInput = document.getElementById('twitchToken');
     if (twitchTokenInput)
         twitchTokenInput.value = data.twitchToken;
+}
+
+// New function to handle AI requests
+export async function askAIRequest(payload) {
+    if (window.screenStream) {
+        payload.screenshot = await captureLastFrameFromStream(window.screenStream);
+        try {
+            const response = await fetch('/api/ask_ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                showNotification("success", result.text);
+            } else {
+                showNotification("error", result.message);
+            }
+        } catch (error) {
+            console.error("Error asking AI:", error);
+            showNotification("error", "Failed to process AI request");
+        }
+    } else {
+        emit('ask_ai', payload);
+    }
 }
