@@ -1,5 +1,4 @@
 V2.0 Companion as an app
-    Share screen => issue using websocket for big picture, maybe we should use a post.
     Share screen => prompt a warning, if the model is not llama3.2-vision:11b saying that we recommand this one, but if doesnt want to use this one, user need to be sure hes llm have vision
     Functionnality, Search on web ?
     hybrider le RAG avec FAISS + BM25
