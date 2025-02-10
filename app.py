@@ -9,6 +9,8 @@ import re
 import logging
 import subprocess
 import time
+import datetime
+import base64
 import bleach
 import eventlet
 from flask import Flask, render_template, send_from_directory, abort, request, jsonify
@@ -20,8 +22,6 @@ from langdetect.lang_detect_exception import LangDetectException
 import fitz  # PyMuPDF
 from utils.rag_handler import RAGHandler
 from utils.file_manager import FileManager, setup_file_manager_routes
-import datetime  # add at top if not present
-import base64
 
 # Monkey patching for eventlet compatibility
 eventlet.monkey_patch(thread=True, os=True, select=True)
