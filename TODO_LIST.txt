@@ -1,9 +1,17 @@
-V2.0 Companion as an app
+V1.1.1 Companion as an app
     Share screen => prompt a warning, if the model is not llama3.2-vision:11b saying that we recommand this one, but if doesnt want to use this one, user need to be sure hes llm have vision
+    UI CFG => Provide the option to view conversation history side bar.
+
+v1.2
+    Hybrider le RAG avec FAISS + BM25
+
+v1.3
     Functionnality, Search on web ?
-    hybrider le RAG avec FAISS + BM25
-    Functionnality, give him controle of computer ? To accomplish task.
-    UI CFG => Provide the option to view conversation history.
-    UI CFG => LLM Management extension(use Local)
+
+v1.4
+    Functionnality, give him controle of computer ? To accomplish list of task.
+
+V2.0 Companion as an app
     Change speach for costum one compatible with ElectronJS as it doesnt work withs standar recognizion
     Companion as an APP => Electron JS instead of Web Browser,
+    UI CFG => LLM Management extension(use Local)
