@@ -175,3 +175,4 @@ cython_debug/
 static/doc
 static/discution
 static/screenshots
+.vscode/
