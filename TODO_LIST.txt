@@ -1,5 +1,4 @@
 V1.1.1 Companion as an app
-    Share screen => prompt a warning, if the model is not llama3.2-vision:11b saying that we recommand this one, but if doesnt want to use this one, user need to be sure hes llm have vision
     UI CFG => Provide the option to view conversation history side bar.
 
 v1.2

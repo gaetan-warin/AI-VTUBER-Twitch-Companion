@@ -41,6 +41,9 @@ function setupEventListeners() {
 
     // Start Stream button event
     $('#startStreamBtn').off('click').on('click', async () => {
+        const ollamaModel = $('#ollamaModel').val() || "";
+        if (!ollamaModel.toLowerCase().includes("vision")) alert("The selected model may not support vision. Make sure to select a model with vision ability for streaming, otherwise the bot won't answer to what's shared.");
+
         try {
             window.screenStream = await startScreenStream();
             $('#startStreamBtn').hide();
