@@ -223,7 +223,7 @@ export function showNotification(type, message) {
 
 export function showQuestionDisplay(text) {
     const questionDisplay = $('#question-display');
-    questionDisplay.text(text).show();
+    questionDisplay.text(`${text.username} : ${text.question}`).show();
     clearTimeout(questionDisplay.data('hideTimeout'));
     questionDisplay.data('hideTimeout', setTimeout(() => {
         questionDisplay.hide();
