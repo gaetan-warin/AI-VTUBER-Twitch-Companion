@@ -17,11 +17,6 @@ const io = new Server(server, {
     transports: ['websocket', 'polling']
 });
 
-// Add basic health check endpoint
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'healthy' });
-});
-
 (async () => {
     try {
         const browser = await puppeteer.launch({
@@ -126,8 +121,6 @@ app.get('/health', (req, res) => {
 
         server.listen(3000, '0.0.0.0', () => {
             console.log("Speech server running on port 3000");
-            require('fs').writeFileSync('speech-server-status.json',
-                JSON.stringify({ status: 'running', pid: process.pid }));
         });
 
     } catch (error) {
@@ -138,11 +131,7 @@ app.get('/health', (req, res) => {
 
 // Clean up on exit
 process.on('exit', () => {
-    try {
-        require('fs').unlinkSync('speech-server-status.json');
-    } catch (e) {
-        // Ignore cleanup errors
-    }
+
 });
 
 // Handle process termination

@@ -6,49 +6,11 @@ const fs = require('fs');
 let mainWindow;
 let speechProcess;
 
-function checkSpeechServer() {
-    return new Promise((resolve) => {
-        const checkInterval = setInterval(() => {
-            try {
-                const status = JSON.parse(fs.readFileSync('speech-server-status.json'));
-                if (status.status === 'running') {
-                    clearInterval(checkInterval);
-                    resolve(true);
-                }
-            } catch (e) {
-                // File doesn't exist yet or can't be read
-            }
-        }, 1000);
-
-        // Timeout after 30 seconds
-        setTimeout(() => {
-            clearInterval(checkInterval);
-            resolve(false);
-        }, 30000);
-    });
-}
-
 async function startSpeechServer() {
-    return new Promise((resolve, reject) => {
-        speechProcess = exec('node speechServer.js', async (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Speech server error: ${error.message}`);
-                reject(error);
-                return;
-            }
-            if (stderr) console.error(`Speech stderr: ${stderr}`);
-            console.log(`Speech stdout: ${stdout}`);
-        });
-
-        checkSpeechServer().then(isRunning => {
-            if (isRunning) {
-                console.log('Speech server started successfully');
-                resolve(true);
-            } else {
-                console.error('Speech server failed to start');
-                reject(new Error('Speech server timeout'));
-            }
-        });
+    speechProcess = exec('node speechServer.js', async (error, stdout, stderr) => {
+        if (error) return console.error(`Speech server error: ${error.message}`);;
+        if (stderr) console.error(`Speech stderr: ${stderr}`);
+        console.log(`Speech stdout: ${stdout}`);
     });
 }
 
