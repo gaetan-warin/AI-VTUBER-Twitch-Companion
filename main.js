@@ -5,6 +5,7 @@ const fs = require('fs');
 
 let mainWindow;
 let speechProcess;
+let flaskProcess;
 
 async function startSpeechServer() {
     speechProcess = exec('node speechServer.js', async (error, stdout, stderr) => {
@@ -66,6 +67,28 @@ ipcMain.handle('get-sources', async () => {
     }
 });
 
+function cleanupProcesses() {
+    console.log('Cleaning up processes...');
+
+    if (speechProcess) {
+        console.log('Terminating speech server...');
+        // Force kill on Windows
+        exec(`taskkill /pid ${speechProcess.pid} /T /F`, (error) => {
+            if (error) console.error('Error killing speech process:', error);
+        });
+        speechProcess = null;
+    }
+
+    if (flaskProcess) {
+        console.log('Terminating Flask server...');
+        // Force kill on Windows
+        exec(`taskkill /pid ${flaskProcess.pid} /T /F`, (error) => {
+            if (error) console.error('Error killing Flask process:', error);
+        });
+        flaskProcess = null;
+    }
+}
+
 app.on('ready', async () => {
     try {
         // Start speech server first
@@ -74,25 +97,35 @@ app.on('ready', async () => {
         // Then create window and start Flask
         createWindow();
 
-        // Start the Flask server
-        const flaskProcess = exec('python app.py', (error, stdout, stderr) => {
+        // Start the Flask server and store the reference
+        flaskProcess = exec('python app.py', (error, stdout, stderr) => {
             if (error) console.error(`Flask server error: ${error.message}`);
             if (stderr) console.error(`Flask stderr: ${stderr}`);
             console.log(`Flask stdout: ${stdout}`);
         });
     } catch (error) {
         console.error('Failed to start services:', error);
+        cleanupProcesses();
         app.quit();
     }
 });
 
+// Clean up on window close
 app.on('window-all-closed', () => {
+    cleanupProcesses();
     if (process.platform !== 'darwin') {
-        if (speechProcess) {
-            speechProcess.kill();
-        }
         app.quit();
     }
+});
+
+// Clean up on app quit
+app.on('before-quit', cleanupProcesses);
+
+// Handle any uncaught exceptions
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught exception:', error);
+    cleanupProcesses();
+    app.quit();
 });
 
 app.on('activate', function () {
