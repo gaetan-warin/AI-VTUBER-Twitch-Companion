@@ -74,7 +74,7 @@ function createWindow() {
 app.on('ready', async () => {
     try {
         // Start speech server first
-        // await startSpeechServer();
+        await startSpeechServer();
 
         // Then create window and start Flask
         createWindow();
