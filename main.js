@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer } = require('electron');
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -60,8 +60,19 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             enableRemoteModule: false,
-            nodeIntegration: false
+            nodeIntegration: false,
+            webSecurity: true,
+            media: true
         }
+    });
+
+    // Add screen capture permissions
+    mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+        return permission === 'media' || permission === 'screen';
+    });
+
+    mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback, details) => {
+        return callback(permission === 'media' || permission === 'screen');
     });
 
     mainWindow.loadURL('http://localhost:5000');
@@ -70,6 +81,27 @@ function createWindow() {
         mainWindow = null;
     });
 }
+
+// Add screen capture handlers
+ipcMain.handle('get-sources', async () => {
+    try {
+        const sources = await desktopCapturer.getSources({
+            types: ['window', 'screen'],
+            thumbnailSize: { width: 150, height: 150 },
+            fetchWindowIcons: true
+        });
+
+        // Sort sources to put displays first
+        return sources.sort((a, b) => {
+            const aIsDisplay = a.name.includes('Screen') || a.name.includes('Display');
+            const bIsDisplay = b.name.includes('Screen') || b.name.includes('Display');
+            return bIsDisplay - aIsDisplay;
+        });
+    } catch (error) {
+        console.error('Error getting sources:', error);
+        throw error;
+    }
+});
 
 app.on('ready', async () => {
     try {
