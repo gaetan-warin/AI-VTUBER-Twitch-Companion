@@ -1,5 +1,6 @@
 V1.1.1 Companion as an app
-    UI CFG => Provide the option to view conversation history side bar.
+        UI CFG => Allow AI to Speak Proactively if idle for x second
+        UI CFG => Provide the option to view conversation history side bar.
 
 v1.2
     Hybrider le RAG avec FAISS + BM25
