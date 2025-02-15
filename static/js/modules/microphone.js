@@ -6,7 +6,7 @@ let audioContext, audioInput, analyser;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
-// Update socket configuration
+// Update socket configuration to fake browser to use default webkitSpeechRecognition
 const socket = io('http://localhost:3000', {
     transports: ['websocket', 'polling'],
     reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
@@ -27,7 +27,6 @@ function setupSpeechSocket() {
         reconnectAttempts = 0;
         serverReady = true;
         $('#startRecordingBtn').prop('disabled', false);
-        showNotification('success', 'Speech recognition is ready');
     });
 
     socket.on('speechServerStatus', (data) => {
@@ -36,7 +35,6 @@ function setupSpeechSocket() {
         if (serverReady) {
             console.log('[Speech Socket] Speech server is ready');
             $('#startRecordingBtn').prop('disabled', false);
-            showNotification('success', 'Speech recognition is ready');
         }
     });
 
