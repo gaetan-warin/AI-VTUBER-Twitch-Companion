@@ -16,5 +16,14 @@ async function initializeApp() {
     checkMicrophoneAccess();
 }
 
+// Example of using Electron's IPC
+document.getElementById('startStreamBtn').addEventListener('click', () => {
+    window.electron.send('start-stream');
+});
+
+document.getElementById('stopStreamBtn').addEventListener('click', () => {
+    window.electron.send('stop-stream');
+});
+
 // Initial setup
 $(document).ready(() => initializeApp());

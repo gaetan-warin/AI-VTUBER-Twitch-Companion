@@ -176,3 +176,5 @@ static/doc
 static/discution
 static/screenshots
 .vscode/
+node_modules/
+package-lock.json
