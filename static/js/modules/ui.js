@@ -58,7 +58,6 @@ function setupEventListeners() {
         if (window.screenStream) {
             stopScreenStream(window.screenStream);
             window.screenStream = null;
-            alert("Stream stopped.");
             $('#stopStreamBtn').hide();
             $('#startStreamBtn').show();
         }
