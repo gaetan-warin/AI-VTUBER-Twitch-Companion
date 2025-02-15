@@ -14,14 +14,30 @@ export async function loadModel(app, modelPath) {
         app.stage.addChild(model);
         currentModel = model;
 
-        // Model positioning
-        model.anchor.set(0.5, 0.5);
-        model.position.set(innerWidth / 2, innerHeight / 2);
+        function updateModelSizeAndPosition() {
+            // Model positioning
+            model.anchor.set(0.5, 0.5);
+            model.position.set(window.innerWidth / 2, window.innerHeight / 2);
 
-        // Model sizing
-        const size = Math.min(innerWidth, innerHeight) * 0.8;
-        model.width = size;
-        model.height = size;
+            // Model sizing
+            const size = Math.min(window.innerWidth, window.innerHeight) * 1;
+            model.width = size;
+            model.height = size;
+        }
+
+        // Initial positioning and sizing
+        updateModelSizeAndPosition();
+
+        // Add window resize listener
+        const resizeHandler = () => {
+            app.renderer.resize(window.innerWidth, window.innerHeight);
+            updateModelSizeAndPosition();
+        };
+
+        // Remove old listener if it exists
+        window.removeEventListener('resize', resizeHandler);
+        // Add new listener
+        window.addEventListener('resize', resizeHandler);
 
         setupMouthMovement(model, modelPath);
         return model;
