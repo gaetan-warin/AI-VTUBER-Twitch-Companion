@@ -1,8 +1,56 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow } = require('electron');
+const { exec } = require('child_process');
 const path = require('path');
-const { spawn } = require('child_process');
+const fs = require('fs');
 
 let mainWindow;
+let speechProcess;
+
+function checkSpeechServer() {
+    return new Promise((resolve) => {
+        const checkInterval = setInterval(() => {
+            try {
+                const status = JSON.parse(fs.readFileSync('speech-server-status.json'));
+                if (status.status === 'running') {
+                    clearInterval(checkInterval);
+                    resolve(true);
+                }
+            } catch (e) {
+                // File doesn't exist yet or can't be read
+            }
+        }, 1000);
+
+        // Timeout after 30 seconds
+        setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve(false);
+        }, 30000);
+    });
+}
+
+async function startSpeechServer() {
+    return new Promise((resolve, reject) => {
+        speechProcess = exec('node speechServer.js', async (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Speech server error: ${error.message}`);
+                reject(error);
+                return;
+            }
+            if (stderr) console.error(`Speech stderr: ${stderr}`);
+            console.log(`Speech stdout: ${stdout}`);
+        });
+
+        checkSpeechServer().then(isRunning => {
+            if (isRunning) {
+                console.log('Speech server started successfully');
+                resolve(true);
+            } else {
+                console.error('Speech server failed to start');
+                reject(new Error('Speech server timeout'));
+            }
+        });
+    });
+}
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -23,27 +71,31 @@ function createWindow() {
     });
 }
 
-app.on('ready', () => {
-    createWindow();
+app.on('ready', async () => {
+    try {
+        // Start speech server first
+        // await startSpeechServer();
 
-    // Start the Flask server
-    const flaskProcess = spawn('python', ['app.py']);
+        // Then create window and start Flask
+        createWindow();
 
-    flaskProcess.stdout.on('data', (data) => {
-        console.log(`Flask server stdout: ${data}`);
-    });
-
-    flaskProcess.stderr.on('data', (data) => {
-        console.error(`Flask server stderr: ${data}`);
-    });
-
-    flaskProcess.on('close', (code) => {
-        console.log(`Flask server exited with code ${code}`);
-    });
+        // Start the Flask server
+        const flaskProcess = exec('python app.py', (error, stdout, stderr) => {
+            if (error) console.error(`Flask server error: ${error.message}`);
+            if (stderr) console.error(`Flask stderr: ${stderr}`);
+            console.log(`Flask stdout: ${stdout}`);
+        });
+    } catch (error) {
+        console.error('Failed to start services:', error);
+        app.quit();
+    }
 });
 
-app.on('window-all-closed', function () {
+app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
+        if (speechProcess) {
+            speechProcess.kill();
+        }
         app.quit();
     }
 });

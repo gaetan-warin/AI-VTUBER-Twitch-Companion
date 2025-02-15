@@ -6,7 +6,9 @@
         "start": "electron ."
     },
     "dependencies": {
-        "electron": "^25.0.0"
-    },
-    "devDependencies": {}
+        "electron": "^25.0.0",
+        "express": "^4.21.2",
+        "puppeteer": "^24.2.1",
+        "socket.io": "^4.8.1"
+    }
 }
