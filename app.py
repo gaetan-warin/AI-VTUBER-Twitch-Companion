@@ -285,13 +285,15 @@ def call_ai_model(messages, screenshot_file_path=None):
 
             # Handle screenshot for Gemini
             if screenshot_file_path:
-                # For vision, we need to pass the image
-                with open(screenshot_file_path, 'rb') as img_file:
-                    import PIL.Image
-                    image = PIL.Image.open(img_file)
-                    # Add image to the last user message
-                    if gemini_messages and gemini_messages[-1]['role'] == 'user':
-                        gemini_messages[-1]['parts'].append(image)
+                # Load the image into memory (don't keep file handle open)
+                import PIL.Image
+                image = PIL.Image.open(screenshot_file_path)
+                # Convert to RGB if necessary (Gemini needs RGB)
+                if image.mode not in ('RGB', 'RGBA'):
+                    image = image.convert('RGB')
+                # Add image to the last user message
+                if gemini_messages and gemini_messages[-1]['role'] == 'user':
+                    gemini_messages[-1]['parts'].append(image)
 
             # Generate response
             chat = model.start_chat(history=gemini_messages[:-1] if len(gemini_messages) > 1 else [])
@@ -504,6 +506,16 @@ Additional instructions: {config.pre_prompt}"""
         # Remove gender alternatives in parentheses like "Prêt(e)" -> "Prêt"
         # Matches patterns like (e), (s), (es), (se), etc.
         cleaned_response = re.sub(r'\([eséESÉ]+\)', '', cleaned_response)
+
+        # Remove special quotes and apostrophes (backticks, smart quotes, etc.)
+        # Replace with standard equivalents for TTS
+        cleaned_response = cleaned_response.replace('`', "'")  # backtick to apostrophe
+        cleaned_response = cleaned_response.replace('"', '"')  # smart double quote opening
+        cleaned_response = cleaned_response.replace('"', '"')  # smart double quote closing
+        cleaned_response = cleaned_response.replace(''', "'")  # smart single quote opening
+        cleaned_response = cleaned_response.replace(''', "'")  # smart single quote closing
+        cleaned_response = cleaned_response.replace('«', '"')  # French quotes
+        cleaned_response = cleaned_response.replace('»', '"')  # French quotes
 
         # Clean up any double spaces created by removals
         cleaned_response = re.sub(r'\s+', ' ', cleaned_response).strip()
