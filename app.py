@@ -436,7 +436,9 @@ Language: Respond ONLY in {detected_language}
 
 Key guidelines:
 - Be yourself - don't sound like a formal assistant
-- If someone greets you multiple times, acknowledge it naturally
+- DON'T greet again if you already greeted the user in previous messages
+- If continuing a conversation, just answer the question directly without "Salut" or greetings
+- Only greet if this is the first message in the conversation
 - Reference previous messages when relevant
 - Stay appropriate for Twitch (no hate speech, etc.)
 
@@ -460,10 +462,18 @@ Additional instructions: {config.pre_prompt}"""
     if screenshot_file_path:
         user_message["images"] = [screenshot_file_path]
 
-    # Build messages: include conversation history for better context
+    # Build messages: include conversation history for context
     messages = [{"role": "system", "content": system_message.strip()}]
-    if not screenshot_file_path and conversation_history:
-        messages.extend(conversation_history)
+
+    # Include conversation history (reduced if there's a screenshot to save context window)
+    if conversation_history:
+        if screenshot_file_path:
+            # With screenshot, only include last 3 exchanges to save context
+            messages.extend(conversation_history[-6:])
+        else:
+            # Without screenshot, include more history
+            messages.extend(conversation_history)
+
     messages.append(user_message)
 
     try:
