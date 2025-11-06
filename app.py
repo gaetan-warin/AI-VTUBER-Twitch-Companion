@@ -4,6 +4,14 @@ This module provides a web server that manages a Live2D avatar, processes AI res
 through Ollama, and handles Twitch chat interactions with WebSocket communication.
 """
 
+# Monkey patching for eventlet compatibility - MUST be done before other imports
+import eventlet
+eventlet.monkey_patch(all=True)
+
+# Suppress eventlet warnings about already-imported modules
+import warnings
+warnings.filterwarnings('ignore', message='.*RLock.*greened.*')
+
 import os
 import re
 import logging
@@ -12,7 +20,6 @@ import time
 import datetime
 import base64
 import bleach
-import eventlet
 from flask import Flask, render_template, send_from_directory, abort, request, jsonify
 from flask_socketio import SocketIO
 from dotenv import load_dotenv, find_dotenv
@@ -20,11 +27,9 @@ import ollama
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 import fitz  # PyMuPDF
+import google.generativeai as genai
 from utils.rag_handler import RAGHandler
 from utils.file_manager import FileManager, setup_file_manager_routes
-
-# Monkey patching for eventlet compatibility
-eventlet.monkey_patch(thread=True, os=True, select=True)
 
 # Load default .env file
 dotenv_path = find_dotenv()
@@ -40,6 +45,10 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'supersecret')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Rate limiting for Gemini API
+gemini_last_call_time = 0
+GEMINI_MIN_DELAY = 4.0  # Minimum 4 seconds between requests (15 requests/min = 4s interval)
+
 # Configuration class
 class Config:
     """Manages environment variables and application settings."""
@@ -54,7 +63,7 @@ class Config:
             'SOCKETIO_CORS_ALLOWED', 'API_URL', 'API_URL_PORT', 'FIXED_LANGUAGE', 'VOICE_GENDER',
             'WAKE_WORD', 'WAKE_WORD_ENABLED', 'CELEBRATE_FOLLOW', 'CELEBRATE_SUB',
             'CELEBRATE_FOLLOW_MESSAGE', 'CELEBRATE_SUB_MESSAGE', 'CELEBRATE_SOUND',
-            'SPEECH_BUBBLE_ENABLED', 'ASK_RAG'
+            'SPEECH_BUBBLE_ENABLED', 'ASK_RAG', 'AI_PROVIDER', 'GEMINI_API_KEY', 'GEMINI_MODEL'
         ]
         self.load()
 
@@ -76,6 +85,10 @@ class Config:
     def save(self):
         """Persist current configuration to the environment file."""
         env_file_path = find_dotenv()
+        if not env_file_path:
+            # If no .env file exists, create one in the project root
+            env_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+
         with open(env_file_path, 'w', encoding='utf-8') as f:  # changed encoding to utf-8
             for field in self.fields:
                 value = getattr(self, field.lower())
@@ -164,6 +177,10 @@ def api_ask_ai():
             'fixedLanguage': response['language']
         }), 200
     else:
+        # Emit error to frontend via socketio
+        socketio.emit('ai_error', {
+            'message': response.get('message', 'Error')
+        })
         return jsonify({
             'status': 'error',
             'message': response.get('message', 'Error')
@@ -196,11 +213,20 @@ def get_background_images():
 
 def get_ollama_models():
     """Return a dict containing available Ollama models."""
+    # Check if using Gemini provider
+    try:
+        ai_provider = getattr(config, 'ai_provider', 'ollama') or 'ollama'
+        if ai_provider.lower() == 'gemini':
+            return {'models': []}
+    except:
+        pass  # If config not loaded yet, proceed with Ollama check
+
     try:
         response = ollama.list()
         return {'models': [model['model'] for model in response['models']]}
-    except ollama.OllamaError as e:
-        logger.error("Error fetching Ollama models: %s", e)
+    except Exception as e:
+        # Only log as warning since this is expected when using Gemini or Ollama isn't running
+        logger.debug("Ollama not available: %s", e)
         return {'models': []}
 
 def get_celebration_sounds():
@@ -211,6 +237,99 @@ def get_celebration_sounds():
     except OSError as e:
         logger.error("Error accessing sounds directory: %s", e)
         return {'sounds': []}
+
+def call_ai_model(messages, screenshot_file_path=None):
+    """
+    Call the appropriate AI model based on configuration.
+    Returns tuple: (response_text, model_name, api_call_time)
+    """
+    global gemini_last_call_time
+    ai_provider = getattr(config, 'ai_provider', 'ollama') or 'ollama'
+    start_time = time.time()
+
+    if ai_provider.lower() == 'gemini':
+        # Rate limiting for Gemini API
+        time_since_last_call = time.time() - gemini_last_call_time
+        if time_since_last_call < GEMINI_MIN_DELAY:
+            wait_time = GEMINI_MIN_DELAY - time_since_last_call
+            logger.info("Rate limiting: waiting %.2f seconds before Gemini API call", wait_time)
+            time.sleep(wait_time)
+
+        # Use Gemini API
+        gemini_api_key = getattr(config, 'gemini_api_key', None)
+        gemini_model = getattr(config, 'gemini_model', 'gemini-1.5-flash')
+
+        if not gemini_api_key:
+            raise ValueError("Gemini API key not configured. Please add your API key in settings.")
+
+        try:
+            genai.configure(api_key=gemini_api_key)
+            model = genai.GenerativeModel(gemini_model)
+
+            # Convert messages to Gemini format
+            # Combine system message with first user message
+            gemini_messages = []
+            system_content = ""
+
+            for msg in messages:
+                if msg['role'] == 'system':
+                    system_content = msg['content']
+                elif msg['role'] == 'user':
+                    content = msg['content']
+                    if system_content:
+                        content = f"{system_content}\n\n{content}"
+                        system_content = ""
+                    gemini_messages.append({'role': 'user', 'parts': [content]})
+                elif msg['role'] == 'assistant':
+                    gemini_messages.append({'role': 'model', 'parts': [msg['content']]})
+
+            # Handle screenshot for Gemini
+            if screenshot_file_path:
+                # For vision, we need to pass the image
+                with open(screenshot_file_path, 'rb') as img_file:
+                    import PIL.Image
+                    image = PIL.Image.open(img_file)
+                    # Add image to the last user message
+                    if gemini_messages and gemini_messages[-1]['role'] == 'user':
+                        gemini_messages[-1]['parts'].append(image)
+
+            # Generate response
+            chat = model.start_chat(history=gemini_messages[:-1] if len(gemini_messages) > 1 else [])
+            response = chat.send_message(gemini_messages[-1]['parts'] if gemini_messages else "Hello")
+
+            # Update last call time for rate limiting
+            gemini_last_call_time = time.time()
+
+            api_time = time.time() - start_time
+            return response.text, gemini_model, api_time
+
+        except Exception as e:
+            error_msg = str(e)
+            if '429' in error_msg or 'Resource exhausted' in error_msg:
+                raise ValueError("Gemini API rate limit exceeded. Please wait a moment before trying again. Free tier has limited requests per minute.")
+            elif 'API_KEY' in error_msg or 'invalid' in error_msg.lower():
+                raise ValueError("Invalid Gemini API key. Please check your API key in settings.")
+            else:
+                raise ValueError(f"Gemini API error: {error_msg}")
+
+    else:
+        # Use Ollama (default)
+        ollama_model = config.ollama_model
+
+        # Add screenshot to user message if provided
+        if screenshot_file_path:
+            for msg in messages:
+                if msg['role'] == 'user' and 'images' not in msg:
+                    msg['images'] = [screenshot_file_path]
+                    break
+
+        response = ollama.chat(
+            model=ollama_model,
+            messages=messages
+        )
+
+        api_time = time.time() - start_time
+        return response['message']['content'], ollama_model, api_time
 
 def process_ai_request(data):
     """Process an AI request based on the input data and return a response."""
@@ -248,12 +367,45 @@ def process_ai_request(data):
     with open(discussion_file_path, 'a', encoding='utf-8') as disc_file:
         disc_file.write(f"({datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}) {username} - {text}\n")
     sanitized_input = bleach.clean(text)
+
+    # Build proper conversation history with alternating roles
     conversation_history = []
     if os.path.exists(discussion_file_path):
         with open(discussion_file_path, 'r', encoding='utf-8') as conv_file:
             lines = conv_file.read().splitlines()
-            for line in lines[-20:]:
-                conversation_history.append({"role": "user", "content": line.strip()})
+
+            # Parse conversation history properly
+            recent_exchanges = []
+            for line in lines[-10:]:  # Reduced to last 10 lines for more focused context
+                if ' - ' in line:
+                    # Extract timestamp, user, and message
+                    parts = line.split(' - ', 1)
+                    if len(parts) == 2:
+                        timestamp_user = parts[0].strip('()')
+                        message = parts[1].strip()
+
+                        # Extract username from timestamp
+                        if ' ' in timestamp_user:
+                            msg_user = timestamp_user.split(' ', 1)[1] if ' ' in timestamp_user else username
+                            recent_exchanges.append({
+                                'user': msg_user,
+                                'message': message
+                            })
+
+            # Build alternating conversation (skip duplicates)
+            last_message = None
+            for exchange in recent_exchanges:
+                msg = exchange['message']
+                # Skip if it's the same as last message (duplicate)
+                if msg == last_message:
+                    continue
+                last_message = msg
+
+                # Determine if this is from the user or the bot
+                if exchange['user'].lower() == username.lower():
+                    conversation_history.append({"role": "user", "content": msg})
+                else:
+                    conversation_history.append({"role": "assistant", "content": msg})
 
     # Detect language
     if source == 'microphone' and fixed_language:
@@ -263,22 +415,43 @@ def process_ai_request(data):
             detected_language = detect(sanitized_input)
         except LangDetectException:
             detected_language = 'en'
-    language_instruction = f"Answer only in this language: {detected_language}. "
 
     # Get relevant documents from RAG handler
     retrieved_docs = rag_handler.get_relevant_documents(sanitized_input) if config.ask_rag else []
 
-    # Build system message and user message (attach screenshot if exists)
-    system_message = f"Persona:\nName: {config.persona_name}\nRole: {config.persona_role}\nInstructions: {language_instruction}{config.pre_prompt}"
+    # Build enhanced system message with better personality
+    system_message = f"""You are {config.persona_name}, {config.persona_role}
+
+Your personality:
+- Warm, friendly, and naturally conversational
+- Use casual language and contractions (I'm, you're, etc.)
+- Show genuine interest in what users say
+- Express personality through your words, NOT with emojis or emoticons
+- Keep responses short and punchy (1-3 sentences max)
+- Match the user's energy and tone
+
+Language: Respond ONLY in {detected_language}
+
+Key guidelines:
+- Be yourself - don't sound like a formal assistant
+- If someone greets you multiple times, acknowledge it naturally
+- Reference previous messages when relevant
+- Stay appropriate for Twitch (no hate speech, etc.)
+- IMPORTANT: Never use emojis, emoticons, or symbols in your responses
+
+Additional instructions: {config.pre_prompt}"""
+
+    # Build user message content
     if config.ask_rag and retrieved_docs:
-        user_message_content = f"This is your memory. If you can answer based on it, do so. If not, forget about this and answer freely.\n\nMemory:\n{retrieved_docs}\n\nQuestion: {sanitized_input}"
+        user_message_content = f"Context from memory: {retrieved_docs}\n\nCurrent message: {sanitized_input}"
     else:
         user_message_content = sanitized_input
+
     user_message = {"role": "user", "content": user_message_content}
     if screenshot_file_path:
         user_message["images"] = [screenshot_file_path]
 
-    # Build messages: omit conversation history if screenshot is provided
+    # Build messages: include conversation history for better context
     messages = [{"role": "system", "content": system_message.strip()}]
     if not screenshot_file_path and conversation_history:
         messages.extend(conversation_history)
@@ -286,34 +459,37 @@ def process_ai_request(data):
 
     try:
         print(f"messages: {messages}")
-        ollama_start_time = time.time()
-        response = ollama.chat(
-            model=config.ollama_model,
-            messages=messages
-        )
-        print(f"response: {response}")
-        ollama_time = time.time() - ollama_start_time
+        api_start_time = time.time()
+
+        # Call AI model (Ollama or Gemini based on config)
+        response_text, model_name, api_time = call_ai_model(messages, screenshot_file_path)
+
+        print(f"response: {response_text}")
+        # Clean response but preserve natural formatting
         cleaned_response = re.sub(
-            r'<think>.*?</think>|\s+',
-            ' ',
-            response['message']['content'],
+            r'<think>.*?</think>',
+            '',
+            response_text,
             flags=re.DOTALL
         ).strip()
+        # Only normalize excessive whitespace (3+ spaces/newlines)
+        cleaned_response = re.sub(r'\s{3,}', ' ', cleaned_response)
+
         try:
             response_language = detect(cleaned_response)
         except LangDetectException:
             response_language = detected_language
         total_time = time.time() - start_time
         print("AI Processing Times:")
-        print(f"  - Model call: {config.ollama_model}")
-        print(f"  - Ollama API call: {ollama_time:.2f} seconds")
+        print(f"  - Model call: {model_name}")
+        print(f"  - API call: {api_time:.2f} seconds")
         print(f"  - Total processing: {total_time:.2f} seconds")
         return {
             'status': 'success',
             'message': cleaned_response,
             'language': response_language
         }, 200
-    except (ollama.ChatError, ValueError) as e:
+    except Exception as e:
         total_time = time.time() - start_time
         logger.error("AI processing error (%0.2f seconds): %s", total_time, e)
         return {'status': 'error', 'message': f'AI service error: {e}'}, 500
@@ -370,6 +546,11 @@ def handle_ask_ai(data):
         socketio.emit('ai_response', {
             'text': response['message'],
             'fixedLanguage': response['language']
+        })
+    else:
+        # Emit error to frontend
+        socketio.emit('ai_error', {
+            'message': response.get('message', 'Unknown error occurred')
         })
 
 @socketio.on('save_config')
@@ -524,8 +705,8 @@ def handle_trigger_ai_request(data):
                 'text': response['message'],
                 'fixedLanguage': response['language']
             })
-    # Catch explicit errors from process_ai_request as needed
-    except (ollama.ChatError, ValueError) as e:
+    # Catch any errors from process_ai_request
+    except Exception as e:
         logger.error("AI request error: %s", e)
         socketio.emit('ai_response_error', {'message': str(e)})
 

@@ -7,7 +7,8 @@ export const config = {
         'OLLAMA_MODEL', 'BOT_NAME_FOLLOW_SUB', 'KEY_WORD_FOLLOW', 'KEY_WORD_SUB',
         'DELIMITER_NAME', 'DELIMITER_NAME_END', 'FIXED_LANGUAGE', 'VOICE_GENDER', 'WAKE_WORD',
         'WAKE_WORD_ENABLED', 'CELEBRATE_FOLLOW', 'CELEBRATE_SUB', 'CELEBRATE_FOLLOW_MESSAGE',
-        'CELEBRATE_SUB_MESSAGE', 'CELEBRATE_SOUND', 'SPEECH_BUBBLE_ENABLED', 'ASK_RAG'
+        'CELEBRATE_SUB_MESSAGE', 'CELEBRATE_SOUND', 'SPEECH_BUBBLE_ENABLED', 'ASK_RAG',
+        'AI_PROVIDER', 'GEMINI_API_KEY', 'GEMINI_MODEL'
     ],
     get() {
         const configData = this.fields.reduce((acc, field) => {
@@ -39,6 +40,11 @@ export const config = {
                 }
             }
         });
+
+        // Trigger AI provider change to show/hide appropriate settings
+        if (data.AI_PROVIDER) {
+            $('#aiProvider').val(data.AI_PROVIDER).trigger('change');
+        }
     },
     snakeToCamelCase(str) {
         return str.toLowerCase().replace(/([-_][a-z])/g, group =>

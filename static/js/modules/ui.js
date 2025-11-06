@@ -121,6 +121,18 @@ function setupEventListeners() {
     $('#fileManager').on('click', openFileManagerModal);
 
     $('#twitchConnectBtn').off('click').on('click', connectToTwitch);
+
+    // AI Provider toggle
+    $('#aiProvider').on('change', function() {
+        const provider = $(this).val();
+        if (provider === 'gemini') {
+            $('#ollamaSettings').hide();
+            $('#geminiSettings').show();
+        } else {
+            $('#ollamaSettings').show();
+            $('#geminiSettings').hide();
+        }
+    });
 }
 
 function connectToTwitch() {

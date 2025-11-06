@@ -22,6 +22,9 @@ export function initializeSocket() {
     socket.on('ai_response', data => {
         speak(data.text, data.fixedLanguage);
     });
+    socket.on('ai_error', data => {
+        handleAIError(data.message);
+    });
     socket.on('display_question', showQuestionDisplay);
     socket.on('fireworks', triggerFireworks);
     socket.on('model_path', data => loadAvatarModel(data.path));
@@ -31,6 +34,39 @@ export function initializeSocket() {
     socket.on('document_deleted', handleDocumentDeleted);
     socket.on('document_uploaded', handleDocumentUploaded);
     socket.on('update_twitch_token', (data) => updateTwitchToken(data));
+}
+
+function handleAIError(message) {
+    console.error('AI Error:', message);
+
+    // Create error notification
+    const errorDiv = $('<div>')
+        .addClass('ai-error-notification')
+        .html(`
+            <div class="error-content">
+                <span class="error-icon">⚠️</span>
+                <span class="error-message">${message}</span>
+                <button class="error-close">×</button>
+            </div>
+        `);
+
+    // Add to body
+    $('body').append(errorDiv);
+
+    // Show with animation
+    setTimeout(() => errorDiv.addClass('show'), 10);
+
+    // Close button handler
+    errorDiv.find('.error-close').on('click', function() {
+        errorDiv.removeClass('show');
+        setTimeout(() => errorDiv.remove(), 300);
+    });
+
+    // Auto-dismiss after 10 seconds
+    setTimeout(() => {
+        errorDiv.removeClass('show');
+        setTimeout(() => errorDiv.remove(), 300);
+    }, 10000);
 }
 
 export function askAI(text) {

@@ -871,5 +871,69 @@ button:hover {
     margin-bottom: 20px;
 }
 
+/* AI Error Notification */
+.ai-error-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 300px;
+    max-width: 500px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s ease-in-out;
+}
+
+.ai-error-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.ai-error-notification .error-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.ai-error-notification .error-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.ai-error-notification .error-message {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.ai-error-notification .error-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    line-height: 1;
+    padding: 0;
+}
+
+.ai-error-notification .error-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
 /* ...rest of your existing styles... */
+
 

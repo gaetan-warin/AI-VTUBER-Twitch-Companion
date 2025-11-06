@@ -124,8 +124,35 @@
 
                     <div class="settings-section">
                         <h3>AI Settings</h3>
-                        <label for="ollamaModel">Ollama Model:</label>
-                        <select id="ollamaModel"></select>
+                        <label for="aiProvider">AI Provider:</label>
+                        <select id="aiProvider">
+                            <option value="ollama">Ollama</option>
+                            <option value="gemini">Google Gemini</option>
+                        </select>
+
+                        <div id="ollamaSettings">
+                            <label for="ollamaModel">Ollama Model:</label>
+                            <select id="ollamaModel"></select>
+                        </div>
+
+                        <div id="geminiSettings" style="display: none;">
+                            <label for="geminiApiKey">Gemini API Key:</label>
+                            <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key">
+                            <small style="display: block; color: #888; margin-bottom: 10px;">
+                                Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>
+                            </small>
+                            <label for="geminiModel">Gemini Model:</label>
+                            <select id="geminiModel">
+                                <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+                                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                            </select>
+                            <small style="display: block; color: #ff9800; margin-top: 5px;">
+                                ⚠️ Free tier has rate limits: 15 requests/min, 1500 requests/day
+                            </small>
+                        </div>
+
                         <div class="checkbox-wrapper">
                             <input type="checkbox" id="speechBubbleEnabled" checked>
                             <label for="speechBubbleEnabled">Show Speech Bubble</label>
