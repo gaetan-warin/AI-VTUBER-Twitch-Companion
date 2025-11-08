@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# AI-generated output files (keep folder structure)
+output/*
+!output/.gitkeep
+
 # C extensions
 *.so
 

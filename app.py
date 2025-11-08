@@ -281,7 +281,7 @@ def call_ai_model(messages, screenshot_file_path=None):
             # Check if the model supports function calling
             # Gemini 2.0 Flash Lite doesn't support function calling well
             supports_function_calling = 'lite' not in gemini_model.lower()
-            
+
             if enable_computer_control and not supports_function_calling:
                 logger.warning(f"Model {gemini_model} may not support function calling. Consider using gemini-2.0-flash-exp or gemini-1.5-flash for computer control.")
 
@@ -289,7 +289,7 @@ def call_ai_model(messages, screenshot_file_path=None):
             if enable_computer_control and supports_function_calling:
                 # Convert function definitions to Gemini format
                 from google.generativeai.types import FunctionDeclaration, Tool
-                
+
                 function_declarations = []
                 for func in COMPUTER_CONTROL_FUNCTIONS:
                     function_declarations.append(
@@ -299,13 +299,13 @@ def call_ai_model(messages, screenshot_file_path=None):
                             parameters=func["parameters"]
                         )
                     )
-                
+
                 tools = [Tool(function_declarations=function_declarations)]
-                
+
                 # Configure model with automatic function calling
                 tool_config = {'function_calling_config': {'mode': 'AUTO'}}
                 model = genai.GenerativeModel(
-                    gemini_model, 
+                    gemini_model,
                     tools=tools,
                     tool_config=tool_config
                 )
@@ -356,41 +356,77 @@ def call_ai_model(messages, screenshot_file_path=None):
                         fc = part.function_call
                         logger.info(f"Part {i} function_call: name={fc.name if fc and hasattr(fc, 'name') else 'None'}")
 
-            # Handle function calling if enabled and supported
-            if enable_computer_control and supports_function_calling and response.candidates[0].content.parts:
-                part = response.candidates[0].content.parts[0]
+            # Handle function calling if enabled and supported - Loop to handle multiple function calls
+            max_function_calls = 10  # Prevent infinite loops
+            function_call_count = 0
 
-                # Check if there's a function call with a name (not empty)
-                if hasattr(part, 'function_call') and part.function_call and hasattr(part.function_call, 'name') and part.function_call.name:
-                    function_call = part.function_call
+            while (enable_computer_control and supports_function_calling and
+                   response.candidates[0].content.parts and
+                   function_call_count < max_function_calls):
+
+                # Check all parts for function calls (parallel function calling)
+                function_calls_found = []
+                for part in response.candidates[0].content.parts:
+                    if (hasattr(part, 'function_call') and part.function_call and
+                        hasattr(part.function_call, 'name') and part.function_call.name):
+                        function_calls_found.append(part.function_call)
+
+                # If no function calls, break the loop
+                if not function_calls_found:
+                    logger.info(f"No more function calls found after {function_call_count} executions")
+                    break
+
+                logger.info(f"Found {len(function_calls_found)} function call(s) to execute")
+
+                # Execute all function calls
+                function_responses = []
+                for function_call in function_calls_found:
                     function_name = function_call.name
                     function_args = dict(function_call.args)
 
-                    logger.info(f"Function call requested: {function_name} with args: {function_args}")
+                    logger.info(f"Function call {function_call_count + 1}: {function_name} with args: {function_args}")
 
                     # Execute the function
                     result = computer_controller.execute_action(function_name, function_args)
                     logger.info(f"Function execution result: {result}")
 
-                    # Send function response back to model
+                    # Create function response
                     function_response = genai.protos.Part(
                         function_response=genai.protos.FunctionResponse(
                             name=function_name,
                             response={'result': result}
                         )
                     )
+                    function_responses.append(function_response)
+                    function_call_count += 1
 
-                    # Get final response with function result
-                    response = chat.send_message(function_response)
-                    logger.info(f"Final response after function call: {response.text}")
-                else:
-                    logger.warning("Computer control enabled but no valid function call detected in response")
+                # Send all function responses back to model
+                response = chat.send_message(function_responses)
+
+                # Log response carefully - check if it has text
+                try:
+                    response_preview = response.text if hasattr(response, 'text') and response.text else 'Checking for more function calls...'
+                    logger.info(f"Response after function call(s): {response_preview}")
+                except Exception:
+                    logger.info("Response after function call(s): Contains function calls or no text yet")
+
+            if function_call_count > 0:
+                logger.info(f"Total function calls executed: {function_call_count}")
 
             # Update last call time for rate limiting
             gemini_last_call_time = time.time()
 
             api_time = time.time() - start_time
-            return response.text, gemini_model, api_time
+
+            # Get final text response - handle case where response only has function calls
+            try:
+                final_text = response.text
+            except Exception as e:
+                logger.warning(f"Could not extract text from response: {e}")
+                # If there's no text (only function calls), provide a default response
+                final_text = "Task completed!"
+
+            return final_text, gemini_model, api_time
 
         except Exception as e:
             error_msg = str(e)
@@ -543,22 +579,64 @@ Key guidelines:
 COMPUTER CONTROL CAPABILITIES:
 You have the ability to control the computer to help users. When a user asks you to:
 - Open applications (notepad, calculator, chrome, etc.) → Use open_application function
-- Open websites or URLs → Use open_website function
-- Search the web → Use search_web function
-- Create files → Use create_file function
+- Open websites ONLY to view them → Use open_website function
+- Search Google (just to open a search page) → Use search_web function
+- Get content/information FROM a website → Use scrape_webpage function (DON'T open first, just scrape!)
+- Extract links from a webpage → Use extract_links function
+- Create files → Use create_file function (just use filename like "jobs.txt" - it will be saved automatically!)
 - List directory contents → Use list_directory function
 
+FILE CREATION: When creating files, just use a simple filename like "jobs.txt" or "results.txt".
+The file will be automatically saved in the project's output folder. No need for full paths!
+
+CRITICAL DISTINCTION:
+- open_website = Opens website in browser for USER to see (doesn't give you the content!)
+- scrape_webpage = Gets the actual content from a website that YOU can read and use
+- extract_links = Gets links from a webpage
+
+IMPORTANT: When asked to "get jobs from LinkedIn" or similar:
+→ DON'T open_website first! Just scrape_webpage directly!
+→ scrape_webpage can access websites without opening them in a browser
+
+When users ask to "find", "get", "search for", or "look for" information ON a specific website:
+→ Use scrape_webpage or extract_links (NOT open_website! NOT search_web!)
+
+When users ask to just "Google something" or "search the web":
+→ Use search_web
+
 IMPORTANT: When a user asks you to do something that requires computer control, YOU MUST use the appropriate function. Don't just say you'll do it - actually call the function to execute the action!
+
+MULTI-STEP TASKS: When a user asks you to do multiple things (like "go to X and do Y"), you should:
+1. Execute ALL the functions needed to complete the task
+2. Don't stop after the first function - keep going!
+3. For "open website and scrape it" → First open_website, then IMMEDIATELY scrape_webpage
+4. For "scrape and save to file" → First scrape_webpage, then IMMEDIATELY create_file
+5. Complete the ENTIRE task before giving a final response
 
 Example:
 User: "open chrome"
 You: [Call open_application with application_name="chrome"] then respond "Opening Chrome for you!"
 
-User: "search for python tutorials"
-You: [Call search_web with query="python tutorials"] then respond "Searching for Python tutorials!"
+User: "Google python tutorials"
+You: [Call search_web with query="python tutorials"] then respond "Opening Google search!"
 
-User: "open mywebsuccess.be"
-You: [Call open_website with url="mywebsuccess.be"] then respond "Opening mywebsuccess.be!"
+User: "what's on the homepage of example.com?"
+You: [Call scrape_webpage with url="example.com"] then respond with the content found
+
+User: "find CTO job links on linkedin.com/jobs"
+You: [Call extract_links with url="linkedin.com/jobs/search/?keywords=cto" and filter_text="cto"] then list the jobs found
+
+User: "find the top 5 CTO jobs on LinkedIn in Belgium"
+You: [Call scrape_webpage with url="linkedin.com/jobs/search/?keywords=cto&location=Belgium"] to get job listings, then tell user what you found
+
+User: "go to linkedin and find IT director jobs in Belgium, save to notepad"
+You: [Call scrape_webpage with url="linkedin.com/jobs/search/?keywords=it+director&location=Belgium"] then [Call create_file with file_path and content] then respond "Done! Saved jobs to notepad."
+
+For complex tasks, chain multiple functions in the SAME response:
+1. Don't say "I'll do X" - just DO X by calling the functions
+2. Call multiple functions in sequence to complete the full task
+3. Only respond with text after ALL functions are called
+4. Example flow: scrape_webpage → create_file → respond "All done!"
 
 Always use the functions when the user requests an action."""
 
@@ -638,6 +716,10 @@ Additional instructions: {config.pre_prompt}"""
         # Remove gender alternatives in parentheses like "Prêt(e)" -> "Prêt"
         # Matches patterns like (e), (s), (es), (se), etc.
         cleaned_response = re.sub(r'\([eséESÉ]+\)', '', cleaned_response)
+
+        # Remove markdown formatting (asterisks for bold/italic)
+        cleaned_response = cleaned_response.replace('**', '')  # Remove bold markers
+        cleaned_response = cleaned_response.replace('*', '')   # Remove italic/bullet markers
 
         # Remove special quotes and apostrophes (backticks, smart quotes, etc.)
         # Replace with standard equivalents for TTS
