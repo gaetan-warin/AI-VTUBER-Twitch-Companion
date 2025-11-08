@@ -1,6 +1,6 @@
 import { startRecording, stopRecording, isCurrentlyRecording } from './microphone.js';
 import { loadAvatarModel, getModelPath } from './model.js';
-import { saveConfig, saveModalConfig, config, populateSelectElement } from './config.js';
+import { saveConfig, saveModalConfig, config, populateSelectElement, loadConfig } from './config.js';
 import { checkListenerStatus, startListener, stopListener, emit } from './socket.js';
 import { areVoicesReady } from './speech.js';
 import { updateCelebrationSound } from './effects.js';
@@ -267,6 +267,9 @@ export function handleInitialConfig(data) {
 
                 // Set configuration before other UI updates
                 config.set(configData);
+                
+                // Load config to set checkboxes and other UI elements
+                loadConfig(configData);
 
                 // Explicitly set wake word checkbox state
                 const $wakeWordCheckbox = $('#wakeWordEnabled');
