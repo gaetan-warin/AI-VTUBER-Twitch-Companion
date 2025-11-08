@@ -4,6 +4,7 @@ import { initializeMicrophone, checkMicrophoneAccess } from './modules/microphon
 import { setupUI } from './modules/ui.js';
 import { initializeEffects } from './modules/effects.js';
 import { initializeSocket, getInitialConfig } from './modules/socket.js';
+import { initializeConversationHistory } from './modules/conversationHistory.js';
 
 async function initializeApp() {
     await initializeSpeech();
@@ -12,6 +13,7 @@ async function initializeApp() {
     initializeMicrophone();
     initializeModel();
     initializeEffects();
+    initializeConversationHistory();
     getInitialConfig();
     checkMicrophoneAccess();
 }

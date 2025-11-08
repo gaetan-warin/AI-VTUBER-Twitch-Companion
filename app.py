@@ -648,6 +648,63 @@ def handle_get_listener_status():
     status = 'running' if listener_process and listener_process.poll() is None else 'stopped'
     socketio.emit('listener_status', {'status': status})
 
+@socketio.on('get_conversation_history')
+def handle_get_conversation_history(data):
+    """Retrieve and emit conversation history for a specific user."""
+    username = data.get('username', 'Gaëtan').lower()
+    discussion_file_path = os.path.join(app.root_path, 'static', 'discution', f"{username}.txt")
+    
+    history = []
+    if os.path.exists(discussion_file_path):
+        try:
+            with open(discussion_file_path, 'r', encoding='utf-8') as f:
+                lines = f.read().splitlines()
+                
+            for line in lines:
+                if ' - ' in line:
+                    parts = line.split(' - ', 1)
+                    if len(parts) == 2:
+                        timestamp_user = parts[0].strip('()')
+                        message = parts[1].strip()
+                        
+                        # Extract timestamp and user
+                        if ' ' in timestamp_user:
+                            timestamp, user = timestamp_user.split(' ', 1)
+                            history.append({
+                                'timestamp': timestamp,
+                                'user': user,
+                                'message': message,
+                                'role': 'user' if user.lower() == username else 'assistant'
+                            })
+        except Exception as e:
+            logger.error("Error reading conversation history: %s", e)
+    
+    socketio.emit('conversation_history', {
+        'status': 'success',
+        'history': history,
+        'username': username
+    })
+
+@socketio.on('clear_conversation_history')
+def handle_clear_conversation_history(data):
+    """Clear conversation history for a specific user."""
+    username = data.get('username', 'Gaëtan').lower()
+    discussion_file_path = os.path.join(app.root_path, 'static', 'discution', f"{username}.txt")
+    
+    try:
+        if os.path.exists(discussion_file_path):
+            os.remove(discussion_file_path)
+        socketio.emit('conversation_history_cleared', {
+            'status': 'success',
+            'username': username
+        })
+    except Exception as e:
+        logger.error("Error clearing conversation history: %s", e)
+        socketio.emit('conversation_history_cleared', {
+            'status': 'error',
+            'message': str(e)
+        })
+
 def get_python_executable():
     """Get the appropriate Python executable path."""
     venv_python = os.path.join(app.root_path, 'venv', 'Scripts', 'python.exe')

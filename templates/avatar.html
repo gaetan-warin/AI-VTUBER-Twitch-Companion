@@ -64,6 +64,11 @@
                     <label for="prePrompt">Pre Prompt:</label>
                     <textarea
                         id="prePrompt">Please respond concisely and avoid monologues. Ensure your behavior strictly adheres to Twitch's Terms of Service, Community Guidelines, and Developer Agreement. Filter out prohibited content (hate speech, threats, etc.), promote respectful interactions, avoid illegal or harmful activities, prevent spam, respect user privacy, and always identify yourself as a bot. Follow channel-specific rules, provide neutral responses when unsure, and be updated regularly to comply with any changes in Twitch's policies.</textarea>
+                    
+                    <div class="settings-section">
+                        <h3>Conversation History</h3>
+                        <button id="viewHistoryBtn" class="view-history-btn">View History</button>
+                    </div>
                 </div>
             </div>
             <div class="tab-content" id="technical" style="display: none;">
@@ -305,6 +310,23 @@
                         <!-- Documents will be listed here -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversation History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Conversation History</h2>
+            
+            <div class="history-controls">
+                <button id="refreshHistoryBtn" class="refresh-history-btn">Refresh</button>
+                <button id="clearHistoryBtn" class="clear-history-btn">Clear History</button>
+            </div>
+            
+            <div id="historyContent" class="history-content">
+                <p class="no-history">Loading conversation history...</p>
             </div>
         </div>
     </div>
