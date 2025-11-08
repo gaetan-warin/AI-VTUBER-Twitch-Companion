@@ -139,6 +139,32 @@ def serve_model_files(filename):
         return send_from_directory(models_dir, filename)
     return abort(404)
 
+@app.route('/download/document/<category>/<filename>')
+def download_document(category, filename):
+    """Serve document files for download based on category."""
+    from werkzeug.utils import secure_filename
+    safe_filename = secure_filename(filename)
+    
+    logger.info(f"Download request - Category: {category}, Filename: {filename}, Safe: {safe_filename}")
+    
+    if category == 'rag':
+        directory = os.path.join(app.root_path, 'static', 'doc')
+    elif category == 'llm':
+        directory = os.path.join(app.root_path, 'output')
+    else:
+        logger.error(f"Invalid category: {category}")
+        return abort(404)
+    
+    file_path = os.path.join(directory, safe_filename)
+    logger.info(f"Looking for file at: {file_path}")
+    logger.info(f"File exists: {os.path.isfile(file_path)}")
+    
+    if os.path.isfile(file_path):
+        return send_from_directory(directory, safe_filename, as_attachment=True)
+    
+    logger.error(f"File not found: {file_path}")
+    return abort(404)
+
 # New route to render the callback page that extracts the token from URL hash
 @app.route('/auth/twitch/callback')
 def twitch_callback():

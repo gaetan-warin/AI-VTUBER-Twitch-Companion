@@ -298,9 +298,16 @@
             <span class="close">&times;</span>
             <h2>Document Manager</h2>
 
-            <div class="file-upload-section">
+            <!-- Tabs for filtering documents -->
+            <div class="document-tabs">
+                <button class="tab-button active" data-tab="all">All Files</button>
+                <button class="tab-button" data-tab="rag">RAG Documents</button>
+                <button class="tab-button" data-tab="llm">LLM Created Files</button>
+            </div>
+
+            <div class="file-upload-section" id="fileUploadSection" style="display: none;">
                 <input type="file" id="fileUpload" accept=".pdf,.txt" style="display: none">
-                <button id="uploadBtn" class="primary-button">Upload New Document</button>
+                <button id="uploadBtn" class="primary-button">Upload RAG Document</button>
                 <p class="field-description">Supported formats: PDF, TXT</p>
             </div>
 
@@ -311,6 +318,7 @@
                             <th>Name</th>
                             <th>Type</th>
                             <th>Size</th>
+                            <th>Location</th>
                             <th>Actions</th>
                         </tr>
                     </thead>

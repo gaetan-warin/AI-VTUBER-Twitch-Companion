@@ -14,10 +14,13 @@ class FileManager:
         self.socketio = socketio
         self.rag_handler = rag_handler
         self.doc_dir = os.path.join(self.app_root, 'static', 'doc')
+        self.output_dir = os.path.join(self.app_root, 'output')
 
     def list_documents(self):
-        """Return a list of documents with their metadata."""
+        """Return a list of documents with their metadata from both directories."""
         documents = []
+
+        # List RAG documents from static/doc
         if os.path.exists(self.doc_dir):
             for filename in os.listdir(self.doc_dir):
                 file_path = os.path.join(self.doc_dir, filename)
@@ -25,24 +28,49 @@ class FileManager:
                     stats = os.stat(file_path)
                     documents.append({
                         'name': filename,
-                        'type': os.path.splitext(filename)[1][1:].upper(),
-                        'size': humanize.naturalsize(stats.st_size)
+                        'type': os.path.splitext(filename)[1][1:].upper() or 'FILE',
+                        'size': humanize.naturalsize(stats.st_size),
+                        'category': 'rag',
+                        'location': 'RAG Documents'
                     })
+
+        # List LLM created files from output directory
+        if os.path.exists(self.output_dir):
+            for filename in os.listdir(self.output_dir):
+                file_path = os.path.join(self.output_dir, filename)
+                if os.path.isfile(file_path) and not filename.startswith('.'):
+                    stats = os.stat(file_path)
+                    documents.append({
+                        'name': filename,
+                        'type': os.path.splitext(filename)[1][1:].upper() or 'FILE',
+                        'size': humanize.naturalsize(stats.st_size),
+                        'category': 'llm',
+                        'location': 'LLM Output'
+                    })
+
         return documents
 
-    def delete_document(self, filename):
-        """Delete a document given its filename and reinitialize the RAG handler.
-        
+    def delete_document(self, filename, category='rag'):
+        """Delete a document given its filename and category, and reinitialize the RAG handler if needed.
+
         Returns a dict with status and a message.
         """
         if not filename:
             return {'status': 'error', 'message': 'No filename provided'}
 
-        file_path = os.path.join(self.doc_dir, secure_filename(filename))
+        # Determine which directory to use based on category
+        if category == 'llm':
+            base_dir = self.output_dir
+        else:
+            base_dir = self.doc_dir
+
+        file_path = os.path.join(base_dir, secure_filename(filename))
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
-                self.rag_handler.initialize(self.doc_dir)
+                # Only reinitialize RAG if deleting from RAG documents
+                if category == 'rag':
+                    self.rag_handler.initialize(self.doc_dir)
                 return {'status': 'success', 'message': f'Deleted {filename}'}
             return {'status': 'error', 'message': 'File not found'}
         except OSError as e:
@@ -51,7 +79,7 @@ class FileManager:
 
     def upload_document(self, file_data):
         """Upload a new document and update the RAG handler.
-        
+
         Returns a dict with status, a message, and file metadata.
         """
         if not file_data:
@@ -97,7 +125,10 @@ def setup_file_manager_routes(socketio, file_manager):
     @socketio.on('delete_document')
     def handle_delete_document(data):
         """Handle file deletion and emit the deletion result."""
-        result = file_manager.delete_document(data.get('filename'))
+        filename = data.get('filename')
+        category = data.get('category', 'rag')
+        result = file_manager.delete_document(filename, category)
+        socketio.emit('document_deleted', result)
         socketio.emit('document_deleted', result)
 
     @socketio.on('upload_document')
