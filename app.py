@@ -29,6 +29,7 @@ from langdetect.lang_detect_exception import LangDetectException
 import fitz  # PyMuPDF
 import google.generativeai as genai
 from utils.rag_handler import RAGHandler
+from utils.computer_control import ComputerController, COMPUTER_CONTROL_FUNCTIONS
 from utils.file_manager import FileManager, setup_file_manager_routes
 
 # Load default .env file
@@ -63,7 +64,8 @@ class Config:
             'SOCKETIO_CORS_ALLOWED', 'API_URL', 'API_URL_PORT', 'FIXED_LANGUAGE', 'VOICE_GENDER',
             'WAKE_WORD', 'WAKE_WORD_ENABLED', 'CELEBRATE_FOLLOW', 'CELEBRATE_SUB',
             'CELEBRATE_FOLLOW_MESSAGE', 'CELEBRATE_SUB_MESSAGE', 'CELEBRATE_SOUND',
-            'SPEECH_BUBBLE_ENABLED', 'ASK_RAG', 'AI_PROVIDER', 'GEMINI_API_KEY', 'GEMINI_MODEL'
+            'SPEECH_BUBBLE_ENABLED', 'ASK_RAG', 'AI_PROVIDER', 'GEMINI_API_KEY', 'GEMINI_MODEL',
+            'ENABLE_COMPUTER_CONTROL'
         ]
         self.load()
 
@@ -108,6 +110,9 @@ listener_process = None
 
 # Initialize global RAG handler
 rag_handler = RAGHandler()
+
+# Initialize Computer Controller
+computer_controller = ComputerController(require_confirmation=True)
 
 # Initialize FileManager
 file_manager = FileManager(app.root_path, socketio, rag_handler)
@@ -264,7 +269,49 @@ def call_ai_model(messages, screenshot_file_path=None):
 
         try:
             genai.configure(api_key=gemini_api_key)
-            model = genai.GenerativeModel(gemini_model)
+
+            # Check if computer control is enabled
+            enable_computer_control_value = getattr(config, 'enable_computer_control', 'False')
+            # Handle both string and boolean values
+            if isinstance(enable_computer_control_value, bool):
+                enable_computer_control = enable_computer_control_value
+            else:
+                enable_computer_control = str(enable_computer_control_value).lower() == 'true'
+
+            # Check if the model supports function calling
+            # Gemini 2.0 Flash Lite doesn't support function calling well
+            supports_function_calling = 'lite' not in gemini_model.lower()
+            
+            if enable_computer_control and not supports_function_calling:
+                logger.warning(f"Model {gemini_model} may not support function calling. Consider using gemini-2.0-flash-exp or gemini-1.5-flash for computer control.")
+
+            # Initialize model with or without tools
+            if enable_computer_control and supports_function_calling:
+                # Convert function definitions to Gemini format
+                from google.generativeai.types import FunctionDeclaration, Tool
+                
+                function_declarations = []
+                for func in COMPUTER_CONTROL_FUNCTIONS:
+                    function_declarations.append(
+                        FunctionDeclaration(
+                            name=func["name"],
+                            description=func["description"],
+                            parameters=func["parameters"]
+                        )
+                    )
+                
+                tools = [Tool(function_declarations=function_declarations)]
+                
+                # Configure model with automatic function calling
+                tool_config = {'function_calling_config': {'mode': 'AUTO'}}
+                model = genai.GenerativeModel(
+                    gemini_model, 
+                    tools=tools,
+                    tool_config=tool_config
+                )
+                logger.info("Initialized model with computer control tools")
+            else:
+                model = genai.GenerativeModel(gemini_model)
 
             # Convert messages to Gemini format
             # Combine system message with first user message
@@ -298,6 +345,46 @@ def call_ai_model(messages, screenshot_file_path=None):
             # Generate response
             chat = model.start_chat(history=gemini_messages[:-1] if len(gemini_messages) > 1 else [])
             response = chat.send_message(gemini_messages[-1]['parts'] if gemini_messages else "Hello")
+
+            # Debug: Log response structure
+            logger.info(f"Response candidates: {len(response.candidates)}")
+            if response.candidates:
+                logger.info(f"Response parts: {len(response.candidates[0].content.parts)}")
+                for i, part in enumerate(response.candidates[0].content.parts):
+                    logger.info(f"Part {i}: has function_call = {hasattr(part, 'function_call')}")
+                    if hasattr(part, 'function_call'):
+                        fc = part.function_call
+                        logger.info(f"Part {i} function_call: name={fc.name if fc and hasattr(fc, 'name') else 'None'}")
+
+            # Handle function calling if enabled and supported
+            if enable_computer_control and supports_function_calling and response.candidates[0].content.parts:
+                part = response.candidates[0].content.parts[0]
+
+                # Check if there's a function call with a name (not empty)
+                if hasattr(part, 'function_call') and part.function_call and hasattr(part.function_call, 'name') and part.function_call.name:
+                    function_call = part.function_call
+                    function_name = function_call.name
+                    function_args = dict(function_call.args)
+
+                    logger.info(f"Function call requested: {function_name} with args: {function_args}")
+
+                    # Execute the function
+                    result = computer_controller.execute_action(function_name, function_args)
+                    logger.info(f"Function execution result: {result}")
+
+                    # Send function response back to model
+                    function_response = genai.protos.Part(
+                        function_response=genai.protos.FunctionResponse(
+                            name=function_name,
+                            response={'result': result}
+                        )
+                    )
+
+                    # Get final response with function result
+                    response = chat.send_message(function_response)
+                    logger.info(f"Final response after function call: {response.text}")
+                else:
+                    logger.warning("Computer control enabled but no valid function call detected in response")
 
             # Update last call time for rate limiting
             gemini_last_call_time = time.time()
@@ -421,6 +508,13 @@ def process_ai_request(data):
     # Get relevant documents from RAG handler
     retrieved_docs = rag_handler.get_relevant_documents(sanitized_input) if config.ask_rag else []
 
+    # Check if computer control is enabled
+    enable_computer_control_value = getattr(config, 'enable_computer_control', 'False')
+    if isinstance(enable_computer_control_value, bool):
+        computer_control_enabled = enable_computer_control_value
+    else:
+        computer_control_enabled = str(enable_computer_control_value).lower() == 'true'
+
     # Build enhanced system message with better personality
     system_message = f"""You are {config.persona_name}, {config.persona_role}
 
@@ -440,7 +534,35 @@ Key guidelines:
 - If continuing a conversation, just answer the question directly without "Salut" or greetings
 - Only greet if this is the first message in the conversation
 - Reference previous messages when relevant
-- Stay appropriate for Twitch (no hate speech, etc.)
+- Stay appropriate for Twitch (no hate speech, etc.)"""
+
+    # Add computer control instructions if enabled
+    if computer_control_enabled:
+        system_message += """
+
+COMPUTER CONTROL CAPABILITIES:
+You have the ability to control the computer to help users. When a user asks you to:
+- Open applications (notepad, calculator, chrome, etc.) → Use open_application function
+- Open websites or URLs → Use open_website function
+- Search the web → Use search_web function
+- Create files → Use create_file function
+- List directory contents → Use list_directory function
+
+IMPORTANT: When a user asks you to do something that requires computer control, YOU MUST use the appropriate function. Don't just say you'll do it - actually call the function to execute the action!
+
+Example:
+User: "open chrome"
+You: [Call open_application with application_name="chrome"] then respond "Opening Chrome for you!"
+
+User: "search for python tutorials"
+You: [Call search_web with query="python tutorials"] then respond "Searching for Python tutorials!"
+
+User: "open mywebsuccess.be"
+You: [Call open_website with url="mywebsuccess.be"] then respond "Opening mywebsuccess.be!"
+
+Always use the functions when the user requests an action."""
+
+    system_message += f"""
 
 CRITICAL for text-to-speech:
 - NEVER use emojis, emoticons, or symbols
@@ -653,20 +775,20 @@ def handle_get_conversation_history(data):
     """Retrieve and emit conversation history for a specific user."""
     username = data.get('username', 'Gaëtan').lower()
     discussion_file_path = os.path.join(app.root_path, 'static', 'discution', f"{username}.txt")
-    
+
     history = []
     if os.path.exists(discussion_file_path):
         try:
             with open(discussion_file_path, 'r', encoding='utf-8') as f:
                 lines = f.read().splitlines()
-                
+
             for line in lines:
                 if ' - ' in line:
                     parts = line.split(' - ', 1)
                     if len(parts) == 2:
                         timestamp_user = parts[0].strip('()')
                         message = parts[1].strip()
-                        
+
                         # Extract timestamp and user
                         if ' ' in timestamp_user:
                             timestamp, user = timestamp_user.split(' ', 1)
@@ -678,7 +800,7 @@ def handle_get_conversation_history(data):
                             })
         except Exception as e:
             logger.error("Error reading conversation history: %s", e)
-    
+
     socketio.emit('conversation_history', {
         'status': 'success',
         'history': history,
@@ -690,7 +812,7 @@ def handle_clear_conversation_history(data):
     """Clear conversation history for a specific user."""
     username = data.get('username', 'Gaëtan').lower()
     discussion_file_path = os.path.join(app.root_path, 'static', 'discution', f"{username}.txt")
-    
+
     try:
         if os.path.exists(discussion_file_path):
             os.remove(discussion_file_path)

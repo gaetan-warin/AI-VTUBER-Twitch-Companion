@@ -148,19 +148,27 @@
                             </small>
                             <label for="geminiModel">Gemini Model:</label>
                             <select id="geminiModel">
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+                                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (Most Capable)</option>
                                 <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
-                                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
-                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                             </select>
                             <small style="display: block; color: #ff9800; margin-top: 5px;">
                                 ⚠️ Free tier has rate limits: 15 requests/min, 1500 requests/day
                             </small>
                         </div>
+                        
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="enableComputerControl">
+                            <label for="enableComputerControl">Enable Computer Control (Gemini only)</label>
+                        </div>
+                        <small style="display: block; color: #888; margin-top: -10px; margin-bottom: 15px;">
+                            ⚠️ Allows AI to open apps, create files, and control your computer. Use with caution!
+                        </small>
 
                         <div class="checkbox-wrapper">
                             <input type="checkbox" id="speechBubbleEnabled" checked>
-                            <label for="speechBubbleEnabled">Show Speech Bubble</label>
+                            <label for="speechBubbleEnabled">Speech Bubble</label>
                         </div>
                         <div class="checkbox-wrapper">
                             <input type="checkbox" id="askRag" checked>

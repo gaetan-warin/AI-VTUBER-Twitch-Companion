@@ -77,6 +77,7 @@ export function saveConfig() {
     const configData = config.get();
     configData.SPEECH_BUBBLE_ENABLED = $('#speechBubbleEnabled').is(':checked');
     configData.ASK_RAG = $('#askRag').is(':checked');
+    configData.ENABLE_COMPUTER_CONTROL = $('#enableComputerControl').is(':checked');
     console.log("save config:", configData);
     emit('save_config', configData);
 }
@@ -90,4 +91,5 @@ export function loadConfig(data) {
     config.set(data);
     $('#speechBubbleEnabled').prop('checked', data.SPEECH_BUBBLE_ENABLED === 'True' || data.SPEECH_BUBBLE_ENABLED === true);
     $('#askRag').prop('checked', data.ASK_RAG === 'True' || data.ASK_RAG === true);
+    $('#enableComputerControl').prop('checked', data.ENABLE_COMPUTER_CONTROL === 'True' || data.ENABLE_COMPUTER_CONTROL === true);
 }
